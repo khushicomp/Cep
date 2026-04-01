@@ -221,15 +221,18 @@ const fetchMonthlyData = async () => {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div className="bank-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" />
-            </svg>
-          </div>
-          <div className="sidebar-title">
-            <h2>Task Monitoring</h2>
-            <p>System</p>
-          </div>
+            <img src="/images.png" alt="Akola Bank" className="sidebar-logo" />
+            <div className="sidebar-bank-name">
+                The Akola Urban<br />Co-operative Bank Ltd.
+            </div>
+            <div className="sidebar-tagline">
+                Efficiency. Transparency. Accountability.
+            </div>
+        </div>
+        
+        <div className="sidebar-user-info">
+            <strong>Welcome, Admin</strong>
+            <div style={{fontSize: '0.85rem', opacity: 0.9, marginTop: '2px'}}>Head Office</div>
         </div>
 
         <nav className="sidebar-nav">
@@ -248,27 +251,19 @@ const fetchMonthlyData = async () => {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="user-profile">
-            <div className="user-avatar">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
-            </div>
-            <div className="user-info">
-              <span className="user-name">Admin</span>
-              <button className="logout-btn">Logout</button>
-            </div>
-          </div>
+            <button className="sidebar-menu-item" style={{background: 'transparent', border: 'none', width: '100%', textAlign: 'left'}}>
+                🚪 Logout
+            </button>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="main-content">
         {/* Header */}
-        <header className="dashboard-header">
+        <header className="page-header">
           <div>
-            <h1 className="page-title">Welcome Head Office</h1>
-            <p className="page-subtitle">Branch Performance Overview</p>
+            <h1>Welcome Head Office</h1>
+            <p>Branch Performance Overview</p>
           </div>
           <div className="header-actions">
             <button className="icon-button">
@@ -280,21 +275,21 @@ const fetchMonthlyData = async () => {
         </header>
 
         {/* Custom Tabs */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', borderBottom: '2px solid var(--bank-tan)', paddingBottom: '10px' }}>
           <button 
-            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'daily_reports' ? '3px solid #7c3aed' : 'none', color: activeTab === 'daily_reports' ? '#7c3aed' : '#64748b', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
+            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'daily_reports' ? '3px solid var(--bank-orange-primary)' : 'none', color: activeTab === 'daily_reports' ? 'var(--bank-orange-primary)' : 'var(--text-gray)', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
             onClick={() => setActiveTab('daily_reports')}
           >
             Daily Business Reports
           </button>
           <button 
-            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'analytics' ? '3px solid #7c3aed' : 'none', color: activeTab === 'analytics' ? '#7c3aed' : '#64748b', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
+            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'analytics' ? '3px solid var(--bank-orange-primary)' : 'none', color: activeTab === 'analytics' ? 'var(--bank-orange-primary)' : 'var(--text-gray)', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
             onClick={() => setActiveTab('analytics')}
           >
             Branch Analytics
           </button>
           <button 
-            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'employee_tasks' ? '3px solid #7c3aed' : 'none', color: activeTab === 'employee_tasks' ? '#7c3aed' : '#64748b', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
+            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'employee_tasks' ? '3px solid var(--bank-orange-primary)' : 'none', color: activeTab === 'employee_tasks' ? 'var(--bank-orange-primary)' : 'var(--text-gray)', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
             onClick={() => setActiveTab('employee_tasks')}
           >
             Employee Tasks
@@ -499,8 +494,12 @@ const fetchMonthlyData = async () => {
         )}
 
         {/* Footer */}
-        <footer className="dashboard-footer">
-          <p>Internal Dashboard for Monitoring Branch Performance - Bank Operations</p>
+        <footer className="footer">
+            <div className="footer-content">
+                <div>
+                    © 2026 The Akola Urban Co-operative Bank Ltd.
+                </div>
+            </div>
         </footer>
       </main>
     </div>

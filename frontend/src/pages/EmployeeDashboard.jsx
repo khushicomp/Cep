@@ -66,17 +66,20 @@ function EmployeeDashboard() {
   return (
     <div className="employee-dashboard">
       {/* Sidebar */}
-      <aside className="sidebar-employee">
-        <div className="sidebar-header-employee">
-          <div className="bank-icon-employee">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" />
-            </svg>
-          </div>
-          <div className="sidebar-title-employee">
-            <h2>Task Monitoring</h2>
-            <p>System</p>
-          </div>
+      <aside className="sidebar">
+        <div className="sidebar-header">
+            <img src="/images.png" alt="Akola Bank" className="sidebar-logo" />
+            <div className="sidebar-bank-name">
+                The Akola Urban<br />Co-operative Bank Ltd.
+            </div>
+            <div className="sidebar-tagline">
+                Efficiency. Transparency. Accountability.
+            </div>
+        </div>
+        
+        <div className="sidebar-user-info">
+            <strong>Welcome, Employee</strong>
+            <div style={{fontSize: '0.85rem', opacity: 0.9, marginTop: '2px'}}>Pune Branch</div>
         </div>
 
         <nav className="sidebar-nav-employee">
@@ -94,28 +97,20 @@ function EmployeeDashboard() {
           </a>
         </nav>
 
-        <div className="sidebar-footer-employee">
-          <div className="user-profile-employee">
-            <div className="user-avatar-employee">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
-            </div>
-            <div className="user-info-employee">
-              <span className="user-name-employee">Employee</span>
-              <button onClick={handleLogout} className="logout-btn-employee">Logout</button>
-            </div>
-          </div>
+        <div className="sidebar-footer">
+            <button className="sidebar-menu-item" onClick={handleLogout} style={{background: 'transparent', border: 'none', width: '100%', textAlign: 'left'}}>
+                🚪 Logout
+            </button>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="main-content-employee">
         {/* Header */}
-        <header className="dashboard-header-employee">
+        <header className="page-header">
           <div>
-            <h1 className="page-title-employee">Welcome Employee</h1>
-            <p className="page-subtitle-employee">Your Assigned Tasks</p>
+            <h1>Welcome Employee</h1>
+            <p>Your Assigned Tasks</p>
           </div>
           <div className="header-actions-employee">
             <button className="icon-button-employee">
@@ -128,58 +123,58 @@ function EmployeeDashboard() {
 
         {/* Performance Cards */}
         {report && (
-          <div className="performance-grid">
-            <div className="perf-card card-purple-employee">
-              <div className="perf-icon">
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon chart">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
                 </svg>
               </div>
-              <div className="perf-content">
-                <h3 className="perf-label">Total Tasks</h3>
-                <p className="perf-value">
+              <div className="stat-content">
+                <h3 className="stat-card-title">Total Tasks</h3>
+                <p className="stat-card-value">
                   <CountUp end={Number(report.total_tasks)} duration={1.2} />
                 </p>
               </div>
             </div>
 
-            <div className="perf-card card-orange-employee">
-              <div className="perf-icon">
+            <div className="stat-card">
+              <div className="stat-icon check">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                 </svg>
               </div>
-              <div className="perf-content">
-                <h3 className="perf-label">Completed</h3>
-                <p className="perf-value">
+              <div className="stat-content">
+                <h3 className="stat-card-title">Completed</h3>
+                <p className="stat-card-value">
                   <CountUp end={Number(report.completed_tasks)} duration={1.2} />
                 </p>
               </div>
             </div>
 
-            <div className="perf-card card-green-employee">
-              <div className="perf-icon">
+            <div className="stat-card">
+              <div className="stat-icon trend">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z" />
                 </svg>
               </div>
-              <div className="perf-content">
-                <h3 className="perf-label">Completion Rate</h3>
-                <p className="perf-value">
+              <div className="stat-content">
+                <h3 className="stat-card-title">Completion Rate</h3>
+                <p className="stat-card-value">
                   <CountUp end={Number(report.completion_percentage)} duration={1.2} />%
                 </p>
               </div>
             </div>
 
-            <div className="perf-card card-blue-employee">
-              <div className="perf-icon">
+            <div className="stat-card">
+              <div className="stat-icon clock">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
                 </svg>
               </div>
-              <div className="perf-content">
-                <h3 className="perf-label">Total Hours</h3>
-                <p className="perf-value">
+              <div className="stat-content">
+                <h3 className="stat-card-title">Total Hours</h3>
+                <p className="stat-card-value">
                   <CountUp end={Number(totalHours)} duration={1.2} /> hrs
                 </p>
               </div>
@@ -191,28 +186,32 @@ function EmployeeDashboard() {
         <div className="tasks-section">
           <div className="tasks-header">
             <h2 className="tasks-title">My Tasks</h2>
-            <div className="tasks-filters">
-              <button onClick={() => setFilter("ALL")} className="filter-btn active">All</button>
-              <button onClick={() => setFilter("PENDING")} className="filter-btn">Pending</button>
-              <button onClick={() => setFilter("IN_PROGRESS")} className="filter-btn">In Progress</button>
-              
+            <div className="filter-tabs">
+              <button onClick={() => setFilter("ALL")} className={`filter-tab ${filter === 'ALL' ? 'active' : ''}`}>All</button>
+              <button onClick={() => setFilter("PENDING")} className={`filter-tab ${filter === 'PENDING' ? 'active' : ''}`}>Pending</button>
+              <button onClick={() => setFilter("IN_PROGRESS")} className={`filter-tab ${filter === 'IN_PROGRESS' ? 'active' : ''}`}>In Progress</button>
             </div>
           </div>
 
-          <div className="tasks-grid">
-            {tasks
-  .filter((task) => {
-    if (filter === "ALL") return true;
-    return task.current_status === filter;
-  })
-  .map((task) => (
-              <TaskCard
-                key={task.task_id}
-                task={task}
-                isSelected={selectedTask === task.task_id}
-                onSelect={() => setSelectedTask(task.task_id)}
-              />
-            ))}
+          <div className="task-list">
+            {tasks.filter((task) => filter === "ALL" || task.current_status === filter).length === 0 ? (
+              <div className="empty-state" style={{gridColumn: '1 / -1'}}>
+                <div className="empty-state-icon">📋</div>
+                <h3 className="empty-state-title">No tasks found</h3>
+                <p className="empty-state-message">You have no tasks matching this filter.</p>
+              </div>
+            ) : (
+                tasks
+                  .filter((task) => filter === "ALL" || task.current_status === filter)
+                  .map((task) => (
+                  <TaskCard
+                    key={task.task_id}
+                    task={task}
+                    isSelected={selectedTask === task.task_id}
+                    onSelect={() => setSelectedTask(task.task_id)}
+                  />
+                ))
+            )}
           </div>
         </div>
       </main>
@@ -227,56 +226,64 @@ function TaskCard({ task, isSelected, onSelect }) {
   const getStatusColor = (status) => {
     switch (status) {
       case "COMPLETED":
-        return "status-completed";
+        return "completed";
       case "IN_PROGRESS":
-        return "status-progress";
+        return "in-progress";
       case "PENDING":
-        return "status-pending";
+        return "pending";
       default:
-        return "status-pending";
+        return "pending";
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
+
   return (
-    <div className={`task-card ${isSelected ? 'task-card-selected' : ''}${task.current_status === "COMPLETED" ? " fade-out status-completed" : ""}`} onClick={onSelect}>
+    <div className={`task-card ${isSelected ? 'task-card-selected' : ''}`} onClick={onSelect}>
       <div className="task-card-header">
         <h3 className="task-name">{task.task_name}</h3>
-        <span className={`task-status ${getStatusColor(status)}`}>
-          {status.replace('_', ' ')}
-        </span>
-        {task.current_status === "COMPLETED" && (
-          <div className="completed-badge">
-            ✅ Completed
+        {task.current_status === "COMPLETED" ? (
+          <div className="task-completed-icon" title="Completed">
+            ✓
           </div>
+        ) : (
+          <span className={`task-status-badge ${getStatusColor(status)}`}>
+            {status.replace('_', ' ')}
+          </span>
         )}
       </div>
 
       <div className="task-card-body">
-        <div className="task-info">
-          <div className="task-info-item">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="task-icon">
-              <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" />
-            </svg>
-            <div>
-              <span className="task-label">Assigned Date</span>
-              <span className="task-value">{task.assigned_date}</span>
-            </div>
-          </div>
-
-          {task.time_taken > 0 && (
-            <div className="task-info-item">
-              <svg viewBox="0 0 24 24" fill="currentColor" className="task-icon">
-                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
-              </svg>
-              <div>
-                <span className="task-label">Time Taken</span>
-                <span className="task-value">{task.time_taken} min</span>
-              </div>
-            </div>
-          )}
+        <div className="task-date">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" />
+          </svg>
+          <span className="task-date-label">Assigned:</span>
+          <span className="task-date-value">{formatDate(task.assigned_date)}</span>
         </div>
-        <div style={{ marginTop: '10px', fontSize: '0.85rem', color: '#64748b' }}>
-          * Report completion and time orally to Manager.
+
+        {task.time_taken > 0 && (
+          <div className="task-date" style={{marginTop: '0.3rem'}}>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+            </svg>
+            <span className="task-date-label">Time Taken:</span>
+            <span className="task-date-value">{task.time_taken} min</span>
+          </div>
+        )}
+        
+        <div className="task-instruction">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+          </svg>
+          <span className="task-instruction-text">
+            Report completion and time orally to Manager.
+          </span>
         </div>
       </div>
     </div>

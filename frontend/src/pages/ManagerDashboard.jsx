@@ -344,16 +344,19 @@ function ManagerDashboard() {
     <div className="manager-dashboard">
       {/* Sidebar */}
       <aside className="sidebar-manager">
-        <div className="sidebar-header-manager">
-          <div className="bank-icon-manager">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" />
-            </svg>
-          </div>
-          <div className="sidebar-title-manager">
-            <h2>Task Monitoring</h2>
-            <p>System</p>
-          </div>
+        <div className="sidebar-header-akola">
+            <img src="/images.png" alt="Akola Bank" className="sidebar-logo-akola" />
+            <div className="sidebar-bank-name-akola">
+                The Akola Urban<br />Co-operative Bank Ltd.
+            </div>
+            <div className="sidebar-tagline-akola">
+                Efficiency. Transparency. Accountability.
+            </div>
+        </div>
+        
+        <div className="sidebar-user-info-akola">
+            <strong>Welcome, Manager</strong>
+            <div style={{fontSize: '0.85rem', opacity: 0.9, marginTop: '2px'}}>Pune Branch</div>
         </div>
 
         <nav className="sidebar-nav-manager">
@@ -371,28 +374,20 @@ function ManagerDashboard() {
           </a>
         </nav>
 
-        <div className="sidebar-footer-manager">
-          <div className="user-profile-manager">
-            <div className="user-avatar-manager">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
-            </div>
-            <div className="user-info-manager">
-              <span className="user-name-manager">Manager</span>
-              <button className="logout-btn-manager">Logout</button>
-            </div>
-          </div>
+        <div className="sidebar-footer-akola">
+            <button className="logout-btn-akola">
+                🚪 Logout
+            </button>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="main-content-manager">
         {/* Header */}
-        <header className="dashboard-header-manager">
+        <header className="page-header-akola">
           <div>
-            <h1 className="page-title-manager">Welcome Manager</h1>
-            <p className="page-subtitle-manager">Daily Overview</p>
+            <h1>Welcome Manager</h1>
+            <p>Branch Performance Overview - Pune Branch</p>
           </div>
           <div className="header-actions-manager">
             <button className="icon-button-manager">
@@ -404,15 +399,15 @@ function ManagerDashboard() {
         </header>
 
         {/* Custom Tabs */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', borderBottom: '2px solid var(--bank-tan)', paddingBottom: '10px' }}>
           <button 
-            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'daily_entry' ? '3px solid #7c3aed' : 'none', color: activeTab === 'daily_entry' ? '#7c3aed' : '#64748b', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
+            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'daily_entry' ? '3px solid var(--bank-orange-primary)' : 'none', color: activeTab === 'daily_entry' ? 'var(--bank-orange-primary)' : 'var(--text-gray)', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
             onClick={() => setActiveTab('daily_entry')}
           >
             Daily Business Entry
           </button>
           <button 
-            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'employee_tasks' ? '3px solid #7c3aed' : 'none', color: activeTab === 'employee_tasks' ? '#7c3aed' : '#64748b', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
+            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'employee_tasks' ? '3px solid var(--bank-orange-primary)' : 'none', color: activeTab === 'employee_tasks' ? 'var(--bank-orange-primary)' : 'var(--text-gray)', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
             onClick={() => setActiveTab('employee_tasks')}
           >
             Employee Tasks
@@ -692,8 +687,12 @@ function ManagerDashboard() {
         )}
 
         {/* Footer */}
-        <footer className="dashboard-footer-manager">
-          <p>Internal System for Monitoring Tasks Assigned to Employees - Bank Operations</p>
+        <footer className="footer-akola">
+            <div className="footer-content-akola">
+                <div>
+                    © 2026 The Akola Urban Co-operative Bank Ltd.
+                </div>
+            </div>
         </footer>
       </main>
     </div>
