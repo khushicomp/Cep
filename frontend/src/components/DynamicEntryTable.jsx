@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import './DynamicEntryTable.css';
+import { showToast } from '../utils/toast';
 
 const ACCOUNT_TYPE_OPTIONS = [
   // Group 1: DEPOSITS
@@ -55,6 +56,7 @@ function DynamicEntryTable({ token }) {
   const [entryId, setEntryId] = useState(null); // If editing existing
   const [history, setHistory] = useState([]);
   const [viewHistory, setViewHistory] = useState(false);
+  const [cameFromHistory, setCameFromHistory] = useState(false);
 
   // Decode basic token info if accessible or rely on backend.
   // Actually, we need branchId for creation. If we don't have it, we might need to fetch the manager profile or depend on the backend retrieving branch via user_id.
@@ -73,7 +75,7 @@ function DynamicEntryTable({ token }) {
   const fetchTodayEntry = async (queryDate) => {
     try {
       setLoading(true);
-      const res = await axios.get(`http://localhost:5000/api/business/my-entries?date=${queryDate}`, {
+      const res = await axios.get(`http://localhost:5000/api/business/my-entries?date=${queryDate}&t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data && res.data.entries) {
@@ -99,7 +101,7 @@ function DynamicEntryTable({ token }) {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/business/history`, {
+      const res = await axios.get(`http://localhost:5000/api/business/history?t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setHistory(res.data || []);
@@ -116,8 +118,56 @@ function DynamicEntryTable({ token }) {
     setEntries([...entries, { id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
   };
 
-  const handleRemoveRow = (id) => {
-    setEntries(entries.filter(e => e.id !== id));
+  const handleRemoveRow = async (id) => {
+    if (entries.length === 1) {
+      if (!window.confirm("This is the last row. Deleting it will remove the entire entry. Continue?")) {
+        return;
+      }
+      if (entryId) {
+        await handleDeleteReport(true);
+      } else {
+        setEntries([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
+      }
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this row?")) {
+      return;
+    }
+
+    const updatedEntries = entries.filter(e => e.id !== id);
+    setEntries(updatedEntries);
+
+    if (entryId) {
+      try {
+        setLoading(true);
+        const payload = {
+          branchId,
+          date,
+          totalAmount: updatedEntries.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
+          status: 'submitted', // Maintain submitted state
+          entries: updatedEntries.map((e, index) => ({
+            srNo: index + 1,
+            accountType: e.accountType,
+            status: e.status,
+            amount: Number(e.amount) || 0,
+            remark: e.remark
+          }))
+        };
+        await axios.put(`http://localhost:5000/api/business/entry/${entryId}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        showToast("Row deleted and saved successfully", "success");
+        fetchHistory();
+      } catch (err) {
+        showToast("Failed to save changes", "error");
+        console.error("Error saving entry:", err);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      showToast("Row deleted successfully", "success");
+    }
   };
 
   const handleChange = (id, field, value) => {
@@ -126,8 +176,32 @@ function DynamicEntryTable({ token }) {
 
   const handleSubmit = async (statusType) => {
     if (entries.length === 0) {
-      alert("At least one entry is required.");
+      showToast("At least one entry is required.", "error");
       return;
+    }
+
+    if (statusType === 'submitted') {
+      let isValid = true;
+      let errorMessages = [];
+      entries.forEach((e, index) => {
+        if (!e.accountType || e.accountType.trim() === '') {
+          errorMessages.push(`Row ${index + 1}: Account Type is required`);
+          isValid = false;
+        }
+        if (!e.status || e.status === '' || e.status === 'Select...') {
+          errorMessages.push(`Row ${index + 1}: Status is required`);
+          isValid = false;
+        }
+        if (!e.amount || Number(e.amount) <= 0) {
+          errorMessages.push(`Row ${index + 1}: Amount must be greater than 0`);
+          isValid = false;
+        }
+      });
+
+      if (!isValid) {
+        alert('Please fix the following errors:\n\n' + errorMessages.join('\n'));
+        return;
+      }
     }
 
     try {
@@ -158,12 +232,41 @@ function DynamicEntryTable({ token }) {
           headers: { Authorization: `Bearer ${token}` }
         });
         setEntryId(res.data.entryId);
-        alert(`Report ${statusType === 'submitted' ? 'Submitted' : 'Saved as Draft'} successfully!`);
+        showToast(`Report ${statusType === 'submitted' ? 'Submitted' : 'Saved as Draft'} successfully!`, 'success');
       }
       fetchHistory();
     } catch (err) {
-      alert("Error saving report.");
+      showToast("Error saving report.", "error");
       console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteReport = async (skipConfirm = false) => {
+    if (!entryId) return;
+    const isSkip = skipConfirm === true;
+    if (!isSkip && !window.confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await axios.delete(`http://localhost:5000/api/business/entry/${entryId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      showToast("Report deleted successfully!", "success");
+      setEntryId(null);
+      setEntries([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
+      
+      await fetchHistory(); // Wait for cache-busted history to load
+      
+      if (cameFromHistory) {
+         setViewHistory(true);
+         setCameFromHistory(false);
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || "Error deleting report", "error");
     } finally {
       setLoading(false);
     }
@@ -191,7 +294,7 @@ function DynamicEntryTable({ token }) {
                   <td>₹ {Number(h.total_amount).toLocaleString()}</td>
                   <td><span className={`status-badge ${h.status === 'submitted' ? 'status-completed-mgr' : 'status-pending-mgr'}`}>{h.status.toUpperCase()}</span></td>
                   <td>
-                    <button onClick={() => { setDate(h.entry_date.split('T')[0]); setViewHistory(false); }} className="action-link-btn">
+                    <button onClick={() => { setDate(h.entry_date.split('T')[0]); setViewHistory(false); setCameFromHistory(true); }} className="action-link-btn">
                       View/Edit
                     </button>
                   </td>
@@ -206,8 +309,11 @@ function DynamicEntryTable({ token }) {
 
   return (
     <div className="dynamic-entry-container">
-      <div className="entry-header">
-        <h2>Daily Business Entry</h2>
+      <div className="entry-header" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        {cameFromHistory && (
+           <button className="back-btn" onClick={() => { setViewHistory(true); setCameFromHistory(false); }} style={{ padding: '0.4rem 0.8rem', marginRight: '10px' }}>← Back to History</button>
+        )}
+        <h2 style={{ flex: 1, margin: 0 }}>Daily Business Entry</h2>
         <div className="entry-controls">
           <label>Date: </label>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
@@ -303,6 +409,16 @@ function DynamicEntryTable({ token }) {
       </div>
 
       <div className="entry-actions">
+        {entryId && (
+          <button 
+             onClick={() => handleDeleteReport(false)} 
+             disabled={loading} 
+             className="draft-btn" 
+             style={{ backgroundColor: '#EF4444', color: 'white', borderColor: '#DC2626', marginRight: 'auto' }}
+          >
+            {loading ? 'Deleting...' : 'Delete Report'}
+          </button>
+        )}
         <button 
           onClick={() => handleSubmit('draft')} 
           disabled={loading} 

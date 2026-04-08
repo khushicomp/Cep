@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import CountUp from "react-countup";
+import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 import AdminBusinessReports from "../components/AdminBusinessReports";
 import AdminBusinessAnalytics from "../components/AdminBusinessAnalytics";
@@ -32,7 +33,15 @@ function AdminDashboard() {
   const [newUser, setNewUser] = useState({ name: "", email: "", role: "MANAGER", branch_id: "" });
   const [activeTab, setActiveTab] = useState("daily_reports");
 
+  const navigate = useNavigate();
   const token = localStorage.getItem("token");
+
+  const handleLogout = () => {
+    if (!window.confirm("Are you sure you want to logout?")) return;
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    navigate("/");
+  };
 
   useEffect(() => {
     fetchBranches();
@@ -236,13 +245,13 @@ const fetchMonthlyData = async () => {
         </div>
 
         <nav className="sidebar-nav">
-          <a href="#dashboard" className="nav-item active">
+          <a href="#dashboard" className={`nav-item ${activeTab !== 'analytics' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('daily_reports'); }}>
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
             </svg>
             Dashboard
           </a>
-          <a href="#reports" className="nav-item">
+          <a href="#reports" className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('analytics'); }}>
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
             </svg>
@@ -251,7 +260,7 @@ const fetchMonthlyData = async () => {
         </nav>
 
         <div className="sidebar-footer">
-            <button className="sidebar-menu-item" style={{background: 'transparent', border: 'none', width: '100%', textAlign: 'left'}}>
+            <button className="sidebar-menu-item" onClick={handleLogout} style={{background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'white'}}>
                 🚪 Logout
             </button>
         </div>
@@ -275,21 +284,21 @@ const fetchMonthlyData = async () => {
         </header>
 
         {/* Custom Tabs */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', borderBottom: '2px solid var(--bank-tan)', paddingBottom: '10px' }}>
+        <div className="tab-navigation">
           <button 
-            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'daily_reports' ? '3px solid var(--bank-orange-primary)' : 'none', color: activeTab === 'daily_reports' ? 'var(--bank-orange-primary)' : 'var(--text-gray)', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
+            className={`tab ${activeTab === 'daily_reports' ? 'active' : ''}`}
             onClick={() => setActiveTab('daily_reports')}
           >
             Daily Business Reports
           </button>
           <button 
-            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'analytics' ? '3px solid var(--bank-orange-primary)' : 'none', color: activeTab === 'analytics' ? 'var(--bank-orange-primary)' : 'var(--text-gray)', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
+            className={`tab ${activeTab === 'analytics' ? 'active' : ''}`}
             onClick={() => setActiveTab('analytics')}
           >
             Branch Analytics
           </button>
           <button 
-            style={{ background: 'transparent', border: 'none', borderBottom: activeTab === 'employee_tasks' ? '3px solid var(--bank-orange-primary)' : 'none', color: activeTab === 'employee_tasks' ? 'var(--bank-orange-primary)' : 'var(--text-gray)', fontSize: '1.1rem', fontWeight: 'bold', padding: '10px 15px', cursor: 'pointer', outline: 'none' }}
+            className={`tab ${activeTab === 'employee_tasks' ? 'active' : ''}`}
             onClick={() => setActiveTab('employee_tasks')}
           >
             Employee Tasks

@@ -25,6 +25,13 @@ router.put(
     businessController.updateEntry
 );
 
+router.delete(
+    "/entry/:id",
+    verifyToken,
+    isAdminOrManager,
+    businessController.deleteEntry
+);
+
 router.get(
     "/history",
     verifyToken,

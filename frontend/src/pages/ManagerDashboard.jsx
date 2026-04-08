@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import CountUp from "react-countup";
+import { useNavigate } from "react-router-dom";
 import "./ManagerDashboard.css";
 import DynamicEntryTable from "../components/DynamicEntryTable";
+import { showToast } from "../utils/toast";
 
 import {
   Chart as ChartJS,
@@ -41,7 +43,15 @@ function ManagerDashboard() {
   const [newEmployeeName, setNewEmployeeName] = useState("");
   const [newEmployeeEmail, setNewEmployeeEmail] = useState("");
 
+  const navigate = useNavigate();
   const token = localStorage.getItem("token");
+
+  const handleLogout = () => {
+    if (!window.confirm("Are you sure you want to logout?")) return;
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    navigate("/");
+  };
 
   useEffect(() => {
     fetchEmployees();
@@ -151,7 +161,7 @@ function ManagerDashboard() {
         }
       );
 
-      alert("Task assigned successfully!");
+      showToast("Task assigned successfully!", "success");
       setTaskName("");
       setSelectedEmployee("");
 
@@ -159,7 +169,7 @@ function ManagerDashboard() {
       fetchWeeklyTrend();
       fetchRecentTasks(currentPage);
     } catch (err) {
-      alert("Error assigning task");
+      showToast("Error assigning task", "error");
       console.error(err);
     }
   };
@@ -360,13 +370,13 @@ function ManagerDashboard() {
         </div>
 
         <nav className="sidebar-nav-manager">
-          <a href="#dashboard" className="nav-item-manager active">
+          <a href="#dashboard" className={`nav-item-manager ${activeTab === 'daily_entry' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('daily_entry'); }}>
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
             </svg>
             Dashboard
           </a>
-          <a href="#assign" className="nav-item-manager">
+          <a href="#assign" className={`nav-item-manager ${activeTab === 'employee_tasks' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); setActiveTab('employee_tasks'); }}>
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
             </svg>
@@ -375,7 +385,7 @@ function ManagerDashboard() {
         </nav>
 
         <div className="sidebar-footer-akola">
-            <button className="logout-btn-akola">
+            <button className="logout-btn-akola" onClick={handleLogout}>
                 🚪 Logout
             </button>
         </div>

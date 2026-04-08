@@ -18,6 +18,7 @@ function EmployeeDashboard() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    if (!window.confirm("Are you sure you want to logout?")) return;
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     navigate("/");
@@ -98,7 +99,7 @@ function EmployeeDashboard() {
         </nav>
 
         <div className="sidebar-footer">
-            <button className="sidebar-menu-item" onClick={handleLogout} style={{background: 'transparent', border: 'none', width: '100%', textAlign: 'left'}}>
+            <button className="sidebar-menu-item" onClick={handleLogout} style={{background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'white'}}>
                 🚪 Logout
             </button>
         </div>

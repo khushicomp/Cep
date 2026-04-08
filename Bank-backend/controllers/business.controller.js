@@ -138,7 +138,36 @@ exports.updateEntry = (req, res) => {
     });
 };
 
-// 4. ADMIN: Get All Branches Summary by Date
+// 4. MANAGER: Delete Entry
+exports.deleteEntry = (req, res) => {
+    const entryId = req.params.id;
+    const managerId = req.user.user_id;
+
+    const checkSql = `SELECT * FROM daily_business_entries WHERE id = ?`;
+    
+    db.query(checkSql, [entryId], (err, results) => {
+        if (err) return res.status(500).json({ error: err });
+        if (results.length === 0) return res.status(404).json({ message: "Entry not found" });
+
+        // Admins could potentially delete any, but for now we enforce manager ownership
+        if (req.user.role !== 'ADMIN' && results[0].manager_id != managerId) {
+            return res.status(403).json({ message: "Not authorized to delete this entry" });
+        }
+
+        const deleteItemsSql = `DELETE FROM daily_business_items WHERE entry_id = ?`;
+        db.query(deleteItemsSql, [entryId], (err2) => {
+            if (err2) return res.status(500).json({ error: err2 });
+
+            const deleteEntrySql = `DELETE FROM daily_business_entries WHERE id = ?`;
+            db.query(deleteEntrySql, [entryId], (err3) => {
+                if (err3) return res.status(500).json({ error: err3 });
+                res.json({ success: true, message: "Entry deleted successfully" });
+            });
+        });
+    });
+};
+
+// 5. ADMIN: Get All Branches Summary by Date
 exports.getAllBranchesSummary = (req, res) => {
     const { date } = req.query;
 
