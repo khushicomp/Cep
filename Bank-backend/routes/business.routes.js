@@ -2,12 +2,14 @@ const express = require("express");
 const router = express.Router();
 const businessController = require("../controllers/business.controller");
 const { verifyToken, isAdminOrManager, isAdmin } = require("../middleware/auth.middleware");
+const { filterByBranch } = require("../middleware/branch.middleware");
 
 // MANAGER ROUTES
 router.post(
     "/daily-entry",
     verifyToken,
     isAdminOrManager,
+    filterByBranch,
     businessController.createDailyEntry
 );
 
@@ -15,6 +17,7 @@ router.get(
     "/my-entries",
     verifyToken,
     isAdminOrManager,
+    filterByBranch,
     businessController.getMyEntries
 );
 
@@ -36,6 +39,7 @@ router.get(
     "/history",
     verifyToken,
     isAdminOrManager,
+    filterByBranch,
     businessController.getHistory
 );
 

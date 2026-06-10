@@ -527,3 +527,8 @@
         gap: 1rem;
     }
 }
+
+/* Filter Buttons */
+.filter-btn { padding: 6px 16px; border: 1px solid #E5E7EB; background: white; color: #4B5563; border-radius: 20px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+.filter-btn:hover { background: #F3F4F6; color: #1F2937; }
+.filter-btn.active { background: #FF6B35; color: white; border-color: #FF6B35; box-shadow: 0 2px 4px rgba(255, 107, 53, 0.2); }

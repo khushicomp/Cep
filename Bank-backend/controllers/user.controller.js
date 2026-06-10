@@ -55,3 +55,20 @@ exports.createUser = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+exports.getEmployees = (req, res) => {
+    const { branchId, canViewAll } = req.branchFilter;
+    
+    let sql = `SELECT user_id, name, email, branch_code, branch_name FROM users WHERE role = 'EMPLOYEE' AND is_active = 1`;
+    const params = [];
+    
+    if (!canViewAll) {
+        sql += ` AND branch_id = ?`;
+        params.push(branchId);
+    }
+    
+    db.query(sql, params, (err, results) => {
+        if (err) return res.status(500).json({ error: err });
+        res.json({ success: true, employees: results });
+    });
+};

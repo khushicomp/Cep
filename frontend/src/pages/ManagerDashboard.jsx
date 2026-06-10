@@ -45,6 +45,10 @@ function ManagerDashboard() {
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const branchName = user?.branch_name || "Unknown Branch";
 
   const handleLogout = () => {
     if (!window.confirm("Are you sure you want to logout?")) return;
@@ -366,7 +370,7 @@ function ManagerDashboard() {
         
         <div className="sidebar-user-info-akola">
             <strong>Welcome, Manager</strong>
-            <div style={{fontSize: '0.85rem', opacity: 0.9, marginTop: '2px'}}>Pune Branch</div>
+            <div style={{fontSize: '0.85rem', opacity: 0.9, marginTop: '2px'}}>{branchName}</div>
         </div>
 
         <nav className="sidebar-nav-manager">
@@ -397,7 +401,7 @@ function ManagerDashboard() {
         <header className="page-header-akola">
           <div>
             <h1>Welcome Manager</h1>
-            <p>Branch Performance Overview - Pune Branch</p>
+            <p>Branch Performance Overview - {branchName}</p>
           </div>
           <div className="header-actions-manager">
             <button className="icon-button-manager">

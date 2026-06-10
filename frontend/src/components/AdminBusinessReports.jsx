@@ -6,6 +6,7 @@ function AdminBusinessReports({ token }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [districtFilter, setDistrictFilter] = useState("ALL");
   
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [branchDetails, setBranchDetails] = useState(null);
@@ -21,7 +22,11 @@ function AdminBusinessReports({ token }) {
       const res = await axios.get(`http://localhost:5000/api/business/all-branches?date=${date}&t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setBranches(res.data);
+      if (res.data.branches) {
+        setBranches(res.data.branches);
+      } else if (Array.isArray(res.data)) {
+        setBranches(res.data);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -155,8 +160,24 @@ function AdminBusinessReports({ token }) {
           </div>
       </div>
 
-      <div className="section-header">
+      <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
         <h2 className="section-title">ALL BRANCHES - TODAY'S BUSINESS</h2>
+        
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            className={`filter-btn ${districtFilter === 'ALL' ? 'active' : ''}`}
+            onClick={() => setDistrictFilter('ALL')}
+          >All</button>
+          <button 
+            className={`filter-btn ${districtFilter === 'AKOLA' ? 'active' : ''}`}
+            onClick={() => setDistrictFilter('AKOLA')}
+          >Akola District</button>
+          <button 
+            className={`filter-btn ${districtFilter === 'OTHER' ? 'active' : ''}`}
+            onClick={() => setDistrictFilter('OTHER')}
+          >Other Districts</button>
+        </div>
+
         <div className="date-filter-container">
           <label className="date-label">Date: </label>
           <input className="date-input" type="date" value={date} onChange={e => setDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
@@ -192,23 +213,32 @@ function AdminBusinessReports({ token }) {
                 </td>
               </tr>
             ) : (
-              branches.map(b => (
-                <tr key={b.branch_id}>
-                  <td>{b.branch_name}</td>
-                  <td align="right" className="amount-cell"><span className="amount-value" style={{color: 'var(--gray-700)'}}>{b.total_entries || 0}</span></td>
+              branches
+              .filter(b => {
+                if (districtFilter === 'AKOLA') return b.branchDistrict === 'Akola';
+                if (districtFilter === 'OTHER') return b.branchDistrict !== 'Akola';
+                return true;
+              })
+              .map(b => (
+                <tr key={b._id || b.branch_id}>
+                  <td>
+                    {b.branchName || b.branch_name}
+                    <div style={{fontSize: '0.75rem', color: '#64748b'}}>{b.branchDistrict || ''}</div>
+                  </td>
+                  <td align="right" className="amount-cell"><span className="amount-value" style={{color: 'var(--gray-700)'}}>{b.totalEntries || b.total_entries || 0}</span></td>
                   <td className="amount-cell">
                     <span className="currency-symbol">₹</span>
-                    <span className="amount-value">{Number(b.total_amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                    <span className="amount-value">{Number(b.totalAmount || b.total_amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                   </td>
                   <td>
-                    {b.status === 'submitted' ? (
+                    {(b.status || '').toLowerCase() === 'submitted' ? (
                        <span className="status-badge submitted">Submitted</span>
                     ) : (
                        <span className="status-badge pending">{b.status || 'No Entry'}</span>
                     )}
                   </td>
                   <td align="center">
-                    <button className="btn-view-details" onClick={() => fetchBranchDetails(b.branch_id)}>View Details</button>
+                    <button className="btn-view-details" onClick={() => fetchBranchDetails(b._id || b.branch_id)}>View Details</button>
                   </td>
                 </tr>
               ))

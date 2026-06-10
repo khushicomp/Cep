@@ -6,19 +6,20 @@ const db = require("../config/db");
  * ============================
  */
 exports.assignTask = (req, res) => {
-  const { task_name, assigned_to } = req.body;
+  const { task_name, assigned_to, description, priority, due_date } = req.body;
   const assigned_by = req.user.user_id;
+  const { branch_id, branch_code, branch_name } = req.userBranch;
 
   if (!task_name || !assigned_to) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
   const sql = `
-    INSERT INTO tasks (task_name, assigned_by, assigned_to, assigned_date)
-    VALUES (?, ?, ?, CURDATE())
+    INSERT INTO tasks (task_name, assigned_by, assigned_to, assigned_date, branch_id, branch_code, branch_name, description, priority, due_date)
+    VALUES (?, ?, ?, CURDATE(), ?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(sql, [task_name, assigned_by, assigned_to], (err, result) => {
+  db.query(sql, [task_name, assigned_by, assigned_to, branch_id, branch_code, branch_name, description || null, priority || 'medium', due_date || null], (err, result) => {
     if (err) {
       return res.status(500).json({ error: err });
     }

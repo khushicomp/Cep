@@ -21,9 +21,13 @@ function Login() {
       );
 
       const role = res.data.role;
+      const user = res.data.user;
 
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", role);
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+      }
 
       if (role === "EMPLOYEE") {
         navigate("/employee");

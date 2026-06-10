@@ -10,11 +10,13 @@ const {
 
 const { verifyToken } = require("../middleware/auth.middleware");
 const { allowRoles } = require("../middleware/role.middleware");
+const { filterByBranch } = require("../middleware/branch.middleware");
 
 router.post(
   "/assign",
   verifyToken,
   allowRoles("MANAGER"),
+  filterByBranch,
   assignTask
 );
 

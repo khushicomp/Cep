@@ -10,7 +10,12 @@ function EmployeeDashboard() {
   const [tasks, setTasks] = useState([]);
   const [report, setReport] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
+  
   const token = localStorage.getItem("token");
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+  const branchName = user?.branch_name || "Unknown Branch";
+
   const totalHours = report
   ? (report.total_time / 60).toFixed(2)
   : 0;
@@ -80,7 +85,7 @@ function EmployeeDashboard() {
         
         <div className="sidebar-user-info">
             <strong>Welcome, Employee</strong>
-            <div style={{fontSize: '0.85rem', opacity: 0.9, marginTop: '2px'}}>Pune Branch</div>
+            <div style={{fontSize: '0.85rem', opacity: 0.9, marginTop: '2px'}}>{branchName}</div>
         </div>
 
         <nav className="sidebar-nav-employee">

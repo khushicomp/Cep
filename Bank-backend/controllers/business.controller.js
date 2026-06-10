@@ -2,19 +2,24 @@ const db = require("../config/db");
 
 // 1. MANAGER: Create Daily Business Entry
 exports.createDailyEntry = (req, res) => {
-    const { branchId, branchName, date, entries, totalAmount, status } = req.body;
+    const { date, entries, totalAmount, status } = req.body;
     const managerId = req.user.user_id;
+    const managerName = req.user.name;
+    const { branch_id, branch_code, branch_name } = req.userBranch;
+    const totalEntries = entries ? entries.length : 0;
+    const submittedAt = (status === 'submitted' || status === 'SUBMITTED') ? new Date() : null;
 
-    if (!branchId || !date || !entries || entries.length === 0) {
+    if (!branch_id || !date || !entries || entries.length === 0) {
         return res.status(400).json({ message: "Missing required fields or empty entries" });
     }
 
     const insertEntrySql = `
-        INSERT INTO daily_business_entries (branch_id, manager_id, entry_date, total_amount, status)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO daily_business_entries 
+        (branch_id, branch_code, branch_name, manager_id, manager_name, entry_date, total_amount, total_entries, status, submitted_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    db.query(insertEntrySql, [branchId, managerId, date, totalAmount, status || 'draft'], (err, entryResult) => {
+    db.query(insertEntrySql, [branch_id, branch_code, branch_name, managerId, managerName, date, totalAmount, totalEntries, status || 'draft', submittedAt], (err, entryResult) => {
         if (err) return res.status(500).json({ error: err });
 
         const entryId = entryResult.insertId;
@@ -93,6 +98,8 @@ exports.updateEntry = (req, res) => {
     const entryId = req.params.id;
     const managerId = req.user.user_id;
     const { totalAmount, status, entries } = req.body;
+    const totalEntries = entries ? entries.length : 0;
+    const submittedAt = (status === 'submitted' || status === 'SUBMITTED') ? new Date() : null;
 
     // Verify ownership
     const checkSql = `SELECT * FROM daily_business_entries WHERE id = ? AND manager_id = ?`;
@@ -101,9 +108,13 @@ exports.updateEntry = (req, res) => {
         if (err) return res.status(500).json({ error: err });
         if (results.length === 0) return res.status(403).json({ message: "Unauthorized or entry not found" });
 
-        const updateEntrySql = `UPDATE daily_business_entries SET total_amount = ?, status = ? WHERE id = ?`;
+        const updateEntrySql = `
+            UPDATE daily_business_entries 
+            SET total_amount = ?, total_entries = ?, status = ?, submitted_at = ?
+            WHERE id = ?
+        `;
         
-        db.query(updateEntrySql, [totalAmount, status, entryId], (err2) => {
+        db.query(updateEntrySql, [totalAmount, totalEntries, status, submittedAt, entryId], (err2) => {
             if (err2) return res.status(500).json({ error: err2 });
 
             const deleteItemsSql = `DELETE FROM daily_business_items WHERE entry_id = ?`;
@@ -170,30 +181,37 @@ exports.deleteEntry = (req, res) => {
 // 5. ADMIN: Get All Branches Summary by Date
 exports.getAllBranchesSummary = (req, res) => {
     const { date } = req.query;
-
-    if (!date) {
-        return res.status(400).json({ message: "Date is required" });
-    }
+    const today = date || new Date().toISOString().split('T')[0];
 
     const sql = `
         SELECT 
-            b.branch_id, 
-            MAX(b.branch_name) as branch_name, 
-            MAX(u.name) as manager_name,
-            COUNT(i.id) as total_entries,
-            IFNULL(MAX(e.total_amount), 0) as total_amount,
-            MAX(e.id) as entry_id,
+            b.branch_id as _id, 
+            b.branch_code as branchCode,
+            b.branch_name as branchName, 
+            b.branch_district as branchDistrict,
+            MAX(e.manager_name) as managerName,
+            IFNULL(SUM(e.total_entries), 0) as totalEntries,
+            IFNULL(SUM(e.total_amount), 0) as totalAmount,
+            MAX(e.submitted_at) as lastSubmitted,
             MAX(e.status) as status
         FROM branches b
-        LEFT JOIN users u ON b.branch_id = u.branch_id AND u.role = 'MANAGER'
-        LEFT JOIN daily_business_entries e ON b.branch_id = e.branch_id AND e.entry_date = ?
-        LEFT JOIN daily_business_items i ON e.id = i.entry_id
-        GROUP BY b.branch_id
+        LEFT JOIN daily_business_entries e ON b.branch_id = e.branch_id AND e.entry_date = ? AND (e.status = 'submitted' OR e.status = 'SUBMITTED')
+        GROUP BY b.branch_id, b.branch_code, b.branch_name, b.branch_district
+        ORDER BY b.branch_name ASC
     `;
 
-    db.query(sql, [date], (err, results) => {
+    db.query(sql, [today], (err, results) => {
         if (err) return res.status(500).json({ error: err });
-        res.json(results);
+        
+        const grandTotal = results.reduce((sum, b) => sum + Number(b.totalAmount), 0);
+        
+        res.json({
+            success: true,
+            date: today,
+            branches: results,
+            totalBranches: results.length,
+            grandTotal: grandTotal
+        });
     });
 };
 
