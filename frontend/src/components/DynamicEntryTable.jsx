@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './DynamicEntryTable.css';
 import { showToast } from '../utils/toast';
 import api from '../services/api';
-import { getToken } from '../utils/auth';
+import { businessToday } from '../utils/businessDate';
 
 const ACCOUNT_TYPE_OPTIONS = [
   // Group 1: DEPOSITS
@@ -51,27 +51,16 @@ const STATUS_OPTIONS = [
 ];
 
 function DynamicEntryTable() {
-  const token = getToken();
   const [entries, setEntries] = useState([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(businessToday());
   const [loading, setLoading] = useState(false);
   const [entryId, setEntryId] = useState(null); // If editing existing
-  const [reportStatus, setReportStatus] = useState('draft'); // 'draft' or 'submitted'
+  const [reportStatus, setReportStatus] = useState('DRAFT');
   const [history, setHistory] = useState([]);
   const [viewHistory, setViewHistory] = useState(false);
   const [cameFromHistory, setCameFromHistory] = useState(false);
 
-  // Decode basic token info if accessible or rely on backend.
-  // Actually, we need branchId for creation. If we don't have it, we might need to fetch the manager profile or depend on the backend retrieving branch via user_id.
-  // The backend already knows branch_id from req.user? Let's assume frontend just sends empty branch if it doesn't know, but we should extract from token.
-  let branchId = '';
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    branchId = payload.branch_id;
-  } catch (e) {}
-
-  const userRole = localStorage.getItem("role");
-  const isLocked = userRole === 'MANAGER' && reportStatus === 'submitted';
+  const isLocked = reportStatus !== 'DRAFT';
 
   useEffect(() => {
     fetchTodayEntry(date);
@@ -84,18 +73,18 @@ function DynamicEntryTable() {
       const res = await api.get(`/business/my-entries?date=${queryDate}&t=${Date.now()}`);
       if (res.data && res.data.entries) {
         setEntryId(res.data.id);
-        setReportStatus(res.data.status || 'draft');
+        setReportStatus((res.data.status || '').toUpperCase());
         const mappedEntries = res.data.entries.map((item, index) => ({
           id: item.id || Date.now() + index,
           accountType: item.accountType,
           status: item.status,
-          amount: item.amount || '',
+          amount: item.amount ?? '',
           remark: item.remark || ''
         }));
         setEntries(mappedEntries.length > 0 ? mappedEntries : [{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
       } else {
         setEntryId(null);
-        setReportStatus('draft');
+        setReportStatus('DRAFT');
         setEntries([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
       }
     } catch {
@@ -123,6 +112,7 @@ function DynamicEntryTable() {
   };
 
   const handleRemoveRow = async (id) => {
+    if (isLocked || loading) return;
     if (entries.length === 1) {
       if (!window.confirm("This is the last row. Deleting it will remove the entire entry. Continue?")) {
         return;
@@ -146,23 +136,23 @@ function DynamicEntryTable() {
       try {
         setLoading(true);
         const payload = {
-          branchId,
           date,
           totalAmount: updatedEntries.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
-          status: 'submitted', // Maintain submitted state
+          status: 'DRAFT', // Removing a row must not submit a draft.
           entries: updatedEntries.map((e, index) => ({
             srNo: index + 1,
             accountType: e.accountType,
             status: e.status,
-            amount: Number(e.amount) || 0,
+            amount: e.amount === '' ? '0' : e.amount,
             remark: e.remark
           }))
         };
         await api.put(`/business/entry/${entryId}`, payload);
         showToast("Row deleted and saved successfully", "success");
         fetchHistory();
-      } catch {
-        showToast("Failed to save changes", "error");
+      } catch (err) {
+        await fetchTodayEntry(date);
+        showToast(err.response?.data?.message || "Failed to save changes", "error");
         console.error("Request failed");
       } finally {
         setLoading(false);
@@ -177,6 +167,7 @@ function DynamicEntryTable() {
   };
 
   const handleSubmit = async (statusType) => {
+    if (isLocked || loading) return;
     if (entries.length === 0) {
       showToast("At least one entry is required.", "error");
       return;
@@ -194,8 +185,8 @@ function DynamicEntryTable() {
           errorMessages.push(`Row ${index + 1}: Status is required`);
           isValid = false;
         }
-        if (!e.amount || Number(e.amount) <= 0) {
-          errorMessages.push(`Row ${index + 1}: Amount must be greater than 0`);
+        if (!/^\d{1,13}(?:\.\d{1,2})?$/.test(String(e.amount))) {
+          errorMessages.push(`Row ${index + 1}: Enter a non-negative amount with at most two decimal places`);
           isValid = false;
         }
       });
@@ -209,7 +200,6 @@ function DynamicEntryTable() {
     try {
       setLoading(true);
       const payload = {
-        branchId,
         date,
         totalAmount,
         status: statusType, // 'draft' or 'submitted'
@@ -217,7 +207,7 @@ function DynamicEntryTable() {
           srNo: index + 1,
           accountType: e.accountType,
           status: e.status,
-          amount: Number(e.amount) || 0,
+          amount: e.amount === '' ? '0' : e.amount,
           remark: e.remark
         }))
       };
@@ -225,18 +215,18 @@ function DynamicEntryTable() {
       if (entryId) {
         // Update existing
         await api.put(`/business/entry/${entryId}`, payload);
-        setReportStatus(statusType);
+        setReportStatus(statusType.toUpperCase());
         alert(`Report ${statusType === 'submitted' ? 'Submitted' : 'Saved as Draft'} successfully!`);
       } else {
         // Create new
         const res = await api.post("/business/daily-entry", payload);
         setEntryId(res.data.entryId);
-        setReportStatus(statusType);
+        setReportStatus(statusType.toUpperCase());
         showToast(`Report ${statusType === 'submitted' ? 'Submitted' : 'Saved as Draft'} successfully!`, 'success');
       }
       fetchHistory();
-    } catch {
-      showToast("Error saving report.", "error");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Error saving report.", "error");
       console.error("Request failed");
     } finally {
       setLoading(false);
@@ -244,7 +234,7 @@ function DynamicEntryTable() {
   };
 
   const handleDeleteReport = async (skipConfirm = false) => {
-    if (!entryId) return;
+    if (!entryId || isLocked || loading) return;
     const isSkip = skipConfirm === true;
     if (!isSkip && !window.confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
       return;
@@ -255,7 +245,7 @@ function DynamicEntryTable() {
       await api.delete(`/business/entry/${entryId}`);
       showToast("Report deleted successfully!", "success");
       setEntryId(null);
-      setReportStatus('draft');
+      setReportStatus('DRAFT');
       setEntries([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
       
       await fetchHistory(); // Wait for cache-busted history to load
@@ -289,14 +279,12 @@ function DynamicEntryTable() {
             {history.length === 0 ? <tr><td colSpan="4" style={{textAlign:'center'}}>No history found</td></tr> :
               history.map(h => (
                 <tr key={h.id}>
-                  <td>{new Date(h.entry_date).toLocaleDateString()}</td>
+                  <td>{h.entry_date}</td>
                   <td>₹ {Number(h.total_amount).toLocaleString()}</td>
-                  <td><span className={`status-badge ${h.status === 'submitted' ? 'status-completed-mgr' : 'status-pending-mgr'}`}>{h.status.toUpperCase()}</span></td>
+                  <td><span className={`status-badge ${['SUBMITTED', 'FINAL_LOCKED'].includes(h.status) ? 'status-completed-mgr' : 'status-pending-mgr'}`}>{h.status.toUpperCase()}</span></td>
                   <td>
                     <button onClick={() => { 
-                      const d = new Date(h.entry_date);
-                      const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                      setDate(localDateStr); 
+                      setDate(h.entry_date);
                       setViewHistory(false); 
                       setCameFromHistory(true); 
                     }} className="action-link-btn">
@@ -321,7 +309,7 @@ function DynamicEntryTable() {
         <h2 style={{ flex: 1, margin: 0 }}>Daily Business Entry</h2>
         <div className="entry-controls">
           <label>Date: </label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} max={businessToday()} />
           <button className="history-btn" onClick={() => setViewHistory(true)}>View History</button>
         </div>
       </div>
@@ -349,7 +337,7 @@ function DynamicEntryTable() {
                     onChange={(e) => handleChange(entry.id, 'accountType', e.target.value)} 
                     placeholder="Search or Select..."
                     className="form-input"
-                    disabled={isLocked}
+                    disabled={isLocked || loading}
                     required
                   />
                   <datalist id="account-types">
@@ -363,7 +351,7 @@ function DynamicEntryTable() {
                     value={entry.status} 
                     onChange={(e) => handleChange(entry.id, 'status', e.target.value)}
                     className="form-select"
-                    disabled={isLocked}
+                    disabled={isLocked || loading}
                     required
                   >
                     <option value="">Select...</option>
@@ -380,7 +368,7 @@ function DynamicEntryTable() {
                     value={entry.amount} 
                     onChange={(e) => handleChange(entry.id, 'amount', e.target.value)}
                     className="form-input"
-                    disabled={isLocked}
+                    disabled={isLocked || loading}
                     placeholder="0.00"
                   />
                 </td>
@@ -390,7 +378,7 @@ function DynamicEntryTable() {
                     value={entry.remark} 
                     onChange={(e) => handleChange(entry.id, 'remark', e.target.value)}
                     className="form-input"
-                    disabled={isLocked}
+                    disabled={isLocked || loading}
                     placeholder="Optional"
                   />
                 </td>
@@ -424,7 +412,7 @@ function DynamicEntryTable() {
       <div className="entry-actions">
         {isLocked ? (
           <div className="locked-notice" style={{ color: '#EF4444', fontWeight: 'bold', padding: '10px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🔒</span> This report has been submitted and is locked for editing.
+            <span>🔒</span> This report is {reportStatus} and cannot be edited.
           </div>
         ) : (
           <>

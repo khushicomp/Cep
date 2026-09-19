@@ -29,6 +29,7 @@ ChartJS.register(
 );
 
 function AdminDashboard() {
+  const isHeadOffice = localStorage.getItem("role") === "HEAD_OFFICE";
   const [branches, setBranches] = useState([]);
   const [weeklyData, setWeeklyData] = useState([]);
   const [newUser, setNewUser] = useState({ name: "", email: "", role: "MANAGER", branch_id: "" });
@@ -43,10 +44,11 @@ function AdminDashboard() {
   };
 
   useEffect(() => {
+    if (isHeadOffice) return; // Legacy employee/task overview is not part of Head Office reads.
     fetchBranches();
     fetchWeeklyTrend();
     fetchMonthlyData();
-  }, []);
+  }, [isHeadOffice]);
 
   const fetchBranches = async () => {
     try {
@@ -277,12 +279,14 @@ const fetchMonthlyData = async () => {
           >
             Branch Analytics
           </button>
+          {!isHeadOffice && (
           <button 
             className={`tab ${activeTab === 'employee_tasks' ? 'active' : ''}`}
             onClick={() => setActiveTab('employee_tasks')}
           >
             Employee Tasks
           </button>
+          )}
         </div>
 
         {activeTab === 'daily_reports' && <AdminBusinessReports />}

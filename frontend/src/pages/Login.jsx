@@ -29,7 +29,7 @@ function Login() {
         navigate("/employee");
       } else if (role === "MANAGER") {
         navigate("/manager");
-      } else if (role === "ADMIN") {
+      } else if ((role === "ADMIN" || role === "HEAD_OFFICE")) {
         navigate("/admin");
       }
     } catch (err) {

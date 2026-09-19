@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { businessToday } from '../utils/businessDate';
 import './AdminBusinessReports.css';
 
 const ACCOUNT_TYPE_OPTIONS = [
@@ -45,7 +46,8 @@ const STATUS_OPTIONS = [
 ];
 
 function AdminBusinessReports() {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const canEditReports = false; // Central report mutations are deferred. Both central roles are read-only.
+  const [date, setDate] = useState(businessToday());
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [districtFilter, setDistrictFilter] = useState("ALL");
@@ -82,11 +84,11 @@ function AdminBusinessReports() {
     }
   };
 
-  const fetchBranchDetails = async (branchId) => {
+  const fetchBranchDetails = async (branchId, reportDate = date) => {
     try {
       setDetailsLoading(true);
       setSelectedBranch(branchId);
-      const res = await api.get(`/business/branch/${branchId}?date=${date}&t=${Date.now()}`);
+      const res = await api.get(`/business/branch/${branchId}?date=${reportDate}&t=${Date.now()}`);
       setBranchDetails(res.data);
     } catch (err) {
       if (err.response && err.response.status === 404) {
@@ -222,10 +224,10 @@ function AdminBusinessReports() {
               ) : (
                 historyList.map(h => (
                   <tr key={h.id}>
-                    <td>{new Date(h.entry_date).toLocaleDateString()}</td>
+                    <td>{h.entry_date}</td>
                     <td>₹ {Number(h.total_amount).toLocaleString('en-IN')}</td>
                     <td>
-                      <span className={`status-badge ${h.status === 'submitted' ? 'submitted' : 'pending'}`}>
+                      <span className={`status-badge ${['SUBMITTED', 'FINAL_LOCKED'].includes(h.status) ? 'submitted' : 'pending'}`}>
                         {h.status.toUpperCase()}
                       </span>
                     </td>
@@ -233,14 +235,12 @@ function AdminBusinessReports() {
                       <button 
                         className="btn-view-details" 
                         onClick={() => {
-                          const d = new Date(h.entry_date);
-                          const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                          setDate(localDateStr);
+                          setDate(h.entry_date);
                           setViewHistory(false);
-                          fetchBranchDetails(selectedBranch);
+                          fetchBranchDetails(selectedBranch, h.entry_date);
                         }}
                       >
-                        View/Edit
+                        View
                       </button>
                     </td>
                   </tr>
@@ -254,7 +254,7 @@ function AdminBusinessReports() {
   }
 
   if (selectedBranch && branchDetails) {
-    if (isEditing) {
+    if (canEditReports && isEditing) {
       return (
         <div className="admin-reports-container">
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
@@ -371,7 +371,7 @@ function AdminBusinessReports() {
           <button className="history-btn" onClick={() => fetchBranchHistory(selectedBranch)} style={{ padding: '0.5rem 1rem', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
             📜 View Submission History
           </button>
-          {branchDetails.id && (
+          {canEditReports && branchDetails.id && (
             <button className="edit-btn" style={{ marginLeft: 'auto', padding: '0.5rem 1rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} onClick={startEditing}>
               ✏️ Edit Report
             </button>
@@ -420,7 +420,7 @@ function AdminBusinessReports() {
   }
 
   const totalBranches = branches.length;
-  const activeBranches = branches.filter(b => b.status === 'submitted').length;
+  const activeBranches = branches.filter(b => ['SUBMITTED', 'FINAL_LOCKED'].includes(b.status)).length;
   const pendingReports = totalBranches - activeBranches;
   const grandTotal = branches.reduce((acc, curr) => acc + Number(curr.total_amount || 0), 0);
   const totalEntries = branches.reduce((acc, curr) => acc + Number(curr.total_entries || 0), 0);
@@ -495,7 +495,7 @@ function AdminBusinessReports() {
 
         <div className="date-filter-container">
           <label className="date-label">Date: </label>
-          <input className="date-input" type="date" value={date} onChange={e => setDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
+          <input className="date-input" type="date" value={date} onChange={e => setDate(e.target.value)} max={businessToday()} />
         </div>
       </div>
 
