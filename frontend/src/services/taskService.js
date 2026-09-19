@@ -1,27 +1,9 @@
-import axios from "axios";
+import api from "./api";
 
-const API_URL = "http://localhost:5000/api";
-
-export const getMyTasks = async() =>{
-    const token = localStorage.getItem("token");
-
-    return axios.get(`${API_URL}/tasks/my-tasks`,{
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
+export const getMyTasks = async () => {
+  return api.get("/tasks/my-tasks");
 };
 
 export const updateTask = async (taskId, data) => {
-    const token = localStorage.getItem("token");
-
-    return axios.put(
-        `${API_URL}/tasks/update/${taskId}`,
-        data,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
+  return api.put(`/tasks/update/${taskId}`, data);
 };

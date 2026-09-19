@@ -128,9 +128,22 @@ exports.getBranchReport = (req, res) => {
  * Weekly Trend (Last 7 Days Completed Tasks)
  */
 exports.getWeeklyTrend = (req, res) => {
-  const branchId = req.user.branch_id;
+  const isAdmin = req.user.role === "ADMIN";
 
-  const sql = `
+  const sql = isAdmin
+    ? `
+    SELECT 
+      DATE(tu.update_date) AS day,
+      COUNT(DISTINCT t.task_id) AS completed_tasks
+    FROM task_updates tu
+    JOIN tasks t ON t.task_id = tu.task_id
+    JOIN users u ON u.user_id = t.assigned_to
+    WHERE tu.status = 'COMPLETED'
+      AND tu.update_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    GROUP BY day
+    ORDER BY day ASC
+  `
+    : `
     SELECT 
       DATE(tu.update_date) AS day,
       COUNT(DISTINCT t.task_id) AS completed_tasks
@@ -144,7 +157,9 @@ exports.getWeeklyTrend = (req, res) => {
     ORDER BY day ASC
   `;
 
-  db.query(sql, [branchId], (err, results) => {
+  const params = isAdmin ? [] : [req.user.branch_id];
+
+  db.query(sql, params, (err, results) => {
     if (err) return res.status(500).json({ error: err });
 
     res.json(results || []);

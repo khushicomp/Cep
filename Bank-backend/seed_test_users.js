@@ -13,15 +13,13 @@ async function seedTestUsers() {
         });
 
         const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash("Bank@1234", salt);
+        const hash = await bcrypt.hash("Test@123", salt);
 
         const testUsers = [
-            // Admin (Head Office)
-            { name: "Admin Officer", email: "admin@akolaurban.bank.in", password: hash, role: "ADMIN", branch_id: 1, phone: "9999999999", joining_date: new Date(), is_active: 1, can_view_all_branches: 1 },
-            
-            // Managers
+            { name: "Admin User", email: "admin@akolaurban.bank.in", password: hash, role: "ADMIN", branch_id: 1, phone: "9999999999", joining_date: new Date(), is_active: 1, can_view_all_branches: 1 },
             { name: "Pune Manager", email: "manager.pune@akolaurban.bank.in", password: hash, role: "MANAGER", branch_id: 37, phone: "8888888888", joining_date: new Date(), is_active: 1, can_view_all_branches: 0 },
-            { name: "Akola Main Manager", email: "manager.akolamain@akolaurban.bank.in", password: hash, role: "MANAGER", branch_id: 2, phone: "7777777777", joining_date: new Date(), is_active: 1, can_view_all_branches: 0 }
+            { name: "Mumbai Manager", email: "manager.mumbai@akolaurban.bank.in", password: hash, role: "MANAGER", branch_id: 21, phone: "8888888887", joining_date: new Date(), is_active: 1, can_view_all_branches: 0 },
+            { name: "Akola Manager", email: "manager.akola@akolaurban.bank.in", password: hash, role: "MANAGER", branch_id: 2, phone: "7777777777", joining_date: new Date(), is_active: 1, can_view_all_branches: 0 }
         ];
 
         console.log("Seeding test users...");
@@ -34,7 +32,8 @@ async function seedTestUsers() {
                  `, [user.name, user.email, user.password, user.role, user.branch_id, user.phone, user.joining_date, user.is_active, user.can_view_all_branches]);
              }
         }
-        console.log("Test users created successfully! Password for all is: Bank@1234");
+        console.log("Test users created successfully! Password for all is: Test@123");
+        console.log("For full branch/employee seeding, use: node scripts/seed-all-users.js");
         
     } catch (err) {
         console.error("Error setting up users:", err);

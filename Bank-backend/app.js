@@ -8,8 +8,12 @@ const app = express();
 // Global Middlewares (Order matters)
 app.use(helmet());
 
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim());
+
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: allowedOrigins,
   credentials: true
 }));
 

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import CountUp from "react-countup";
 import "./EmployeeDashboard.css";
 import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import { clearSession } from "../utils/auth";
 
 
 function EmployeeDashboard() {
@@ -11,7 +12,6 @@ function EmployeeDashboard() {
   const [report, setReport] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   
-  const token = localStorage.getItem("token");
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
   const branchName = user?.branch_name || "Unknown Branch";
@@ -24,14 +24,9 @@ function EmployeeDashboard() {
 
   const handleLogout = () => {
     if (!window.confirm("Are you sure you want to logout?")) return;
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
+    clearSession();
     navigate("/");
   };
-
-  if (!token) {
-    navigate("/");
-  }
 
   useEffect(() => {
     fetchTasks();
@@ -40,12 +35,7 @@ function EmployeeDashboard() {
 
   const fetchTasks = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/tasks/my-tasks",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get("/tasks/my-tasks");
       setTasks(res.data);
     } catch (err) {
       console.error("Error fetching tasks:", err);
@@ -54,12 +44,7 @@ function EmployeeDashboard() {
 
   const fetchReport = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/reports/employee",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get("/reports/employee");
       setReport(res.data);
     } catch (err) {
       console.error("Error fetching report:", err);

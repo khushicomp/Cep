@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import './AdminBusinessReports.css';
 
-function AdminBusinessAnalytics({ token }) {
+function AdminBusinessAnalytics() {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -12,9 +12,7 @@ function AdminBusinessAnalytics({ token }) {
 
   const fetchReports = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/business/reports', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/business/reports');
       setReportData(res.data);
     } catch (err) {
       console.error(err);

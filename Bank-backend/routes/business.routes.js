@@ -65,4 +65,11 @@ router.get(
     businessController.getReports
 );
 
+router.get(
+    "/branch-history/:branchId",
+    verifyToken,
+    isAdmin,
+    businessController.getBranchHistory
+);
+
 module.exports = router;

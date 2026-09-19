@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import CountUp from "react-countup";
 import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 import AdminBusinessReports from "../components/AdminBusinessReports";
 import AdminBusinessAnalytics from "../components/AdminBusinessAnalytics";
+import api from "../services/api";
+import { clearSession } from "../utils/auth";
 
 import {
   Chart as ChartJS,
@@ -34,12 +35,10 @@ function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("daily_reports");
 
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
   const handleLogout = () => {
     if (!window.confirm("Are you sure you want to logout?")) return;
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
+    clearSession();
     navigate("/");
   };
 
@@ -51,12 +50,7 @@ function AdminDashboard() {
 
   const fetchBranches = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/reports/all-branches",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get("/reports/all-branches");
       setBranches(res.data);
     } catch (err) {
       console.error("Error fetching branches:", err);
@@ -65,12 +59,7 @@ function AdminDashboard() {
 
   const fetchWeeklyTrend = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/reports/weekly-trend",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get("/reports/weekly-trend");
       setWeeklyData(res.data);
     } catch (err) {
       console.error("Error fetching weekly trend:", err);
@@ -81,12 +70,7 @@ function AdminDashboard() {
 
 const fetchMonthlyData = async () => {
   try {
-    const res = await axios.get(
-      "http://localhost:5000/api/reports/admin/monthly",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const res = await api.get("/reports/admin/monthly");
 
     setMonthlyData(res.data);
   } catch (err) {
@@ -97,11 +81,7 @@ const fetchMonthlyData = async () => {
   const handleAddUser = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/users/create",
-        newUser,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post("/users/create", newUser);
       
       alert(`User created successfully!\nDefault password: ${res.data.user.defaultPassword}`);
       setNewUser({ name: "", email: "", role: "MANAGER", branch_id: "" });
@@ -305,8 +285,8 @@ const fetchMonthlyData = async () => {
           </button>
         </div>
 
-        {activeTab === 'daily_reports' && <AdminBusinessReports token={token} />}
-        {activeTab === 'analytics' && <AdminBusinessAnalytics token={token} />}
+        {activeTab === 'daily_reports' && <AdminBusinessReports />}
+        {activeTab === 'analytics' && <AdminBusinessAnalytics />}
         {activeTab === 'employee_tasks' && (
           <>
         {/* Add User Section */}

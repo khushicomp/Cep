@@ -40,7 +40,7 @@ router.get(
 router.get(
   "/weekly-trend",
   verifyToken,
-  allowRoles("MANAGER"),
+  allowRoles("MANAGER", "ADMIN"),
   getWeeklyTrend
 );
 

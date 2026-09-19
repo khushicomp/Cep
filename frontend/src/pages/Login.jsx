@@ -1,24 +1,20 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import api from "../services/api";
 import "./Login.css";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
 
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        {
-          email,
-          password,
-        }
-      );
+      const res = await api.post("/auth/login", { email, password });
 
       const role = res.data.role;
       const user = res.data.user;
@@ -36,10 +32,11 @@ function Login() {
       } else if (role === "ADMIN") {
         navigate("/admin");
       }
-
     } catch (err) {
+      const message =
+        err.response?.data?.message || "Invalid credentials or server error";
+      setError(message);
       console.error(err);
-      alert("Invalid credentials or server error");
     }
   };
 
@@ -47,7 +44,6 @@ function Login() {
     <div className="login-container">
       <div className="login-content">
         <div className="content-wrapper">
-          {/* Left Side - Welcome Section */}
           <div className="welcome-section">
             <div className="bank-logo">
               <img src="/images.png" alt="Bank Logo" className="logo-image" />
@@ -67,7 +63,6 @@ function Login() {
             </div>
           </div>
 
-          {/* Right Side - Login Form */}
           <div className="login-section">
             <div className="login-card">
               <div className="user-icon">
@@ -77,6 +72,12 @@ function Login() {
               </div>
 
               <form onSubmit={handleLogin}>
+                {error && (
+                  <p className="login-error" role="alert">
+                    {error}
+                  </p>
+                )}
+
                 <div className="input-group">
                   <label htmlFor="email">Username:</label>
                   <input

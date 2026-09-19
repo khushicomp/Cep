@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import CountUp from "react-countup";
 import { useNavigate } from "react-router-dom";
 import "./ManagerDashboard.css";
 import DynamicEntryTable from "../components/DynamicEntryTable";
 import { showToast } from "../utils/toast";
+import api from "../services/api";
+import { clearSession, getToken } from "../utils/auth";
 
 import {
   Chart as ChartJS,
@@ -44,7 +45,7 @@ function ManagerDashboard() {
   const [newEmployeeEmail, setNewEmployeeEmail] = useState("");
 
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
+  const token = getToken();
   
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
@@ -52,8 +53,7 @@ function ManagerDashboard() {
 
   const handleLogout = () => {
     if (!window.confirm("Are you sure you want to logout?")) return;
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
+    clearSession();
     navigate("/");
   };
 
@@ -72,12 +72,7 @@ function ManagerDashboard() {
 
   const fetchEmployees = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/reports/branch-employees",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get("/reports/branch-employees");
       setEmployees(res.data);
     } catch (err) {
       console.error(err);
@@ -86,12 +81,7 @@ function ManagerDashboard() {
 
   const fetchBranchReport = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/reports/branch",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get("/reports/branch");
       setReport(res.data);
     } catch (err) {
       console.error(err);
@@ -100,12 +90,7 @@ function ManagerDashboard() {
 
   const fetchWeeklyTrend = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/reports/weekly-trend",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get("/reports/weekly-trend");
       setWeeklyData(res.data);
     } catch (err) {
       console.error(err);
@@ -114,12 +99,7 @@ function ManagerDashboard() {
 
   const fetchRecentTasks = async (page = 1) => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/tasks/recent?page=${page}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await api.get(`/tasks/recent?page=${page}`);
       
       // Handle both response formats
       if (res.data.tasks) {
@@ -154,16 +134,10 @@ function ManagerDashboard() {
     }
 
     try {
-      await axios.post(
-        "http://localhost:5000/api/tasks/assign",
-        {
-          task_name: taskName,
-          assigned_to: selectedEmployee,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await api.post("/tasks/assign", {
+        task_name: taskName,
+        assigned_to: selectedEmployee,
+      });
 
       showToast("Task assigned successfully!", "success");
       setTaskName("");
@@ -189,16 +163,12 @@ function ManagerDashboard() {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const branch_id = payload.branch_id;
 
-      const res = await axios.post(
-        "http://localhost:5000/api/users/create",
-        {
-          name: newEmployeeName,
-          email: newEmployeeEmail,
-          role: "EMPLOYEE",
-          branch_id
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post("/users/create", {
+        name: newEmployeeName,
+        email: newEmployeeEmail,
+        role: "EMPLOYEE",
+        branch_id,
+      });
       
       alert(`Employee created successfully!\nDefault password: ${res.data.user.defaultPassword}`);
       setNewEmployeeName("");
@@ -429,7 +399,7 @@ function ManagerDashboard() {
         </div>
 
         {activeTab === 'daily_entry' ? (
-          <DynamicEntryTable token={token} />
+          <DynamicEntryTable />
         ) : (
           <>
         {/* Assign Task Section */}

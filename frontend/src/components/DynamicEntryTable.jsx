@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
 import './DynamicEntryTable.css';
 import { showToast } from '../utils/toast';
+import api from '../services/api';
+import { getToken } from '../utils/auth';
 
 const ACCOUNT_TYPE_OPTIONS = [
   // Group 1: DEPOSITS
@@ -49,11 +50,13 @@ const STATUS_OPTIONS = [
   'Opened', 'Disbursed', 'Regularised', 'Sanctioned', 'Pending', 'Sent to HO'
 ];
 
-function DynamicEntryTable({ token }) {
+function DynamicEntryTable() {
+  const token = getToken();
   const [entries, setEntries] = useState([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [entryId, setEntryId] = useState(null); // If editing existing
+  const [reportStatus, setReportStatus] = useState('draft'); // 'draft' or 'submitted'
   const [history, setHistory] = useState([]);
   const [viewHistory, setViewHistory] = useState(false);
   const [cameFromHistory, setCameFromHistory] = useState(false);
@@ -67,6 +70,9 @@ function DynamicEntryTable({ token }) {
     branchId = payload.branch_id;
   } catch (e) {}
 
+  const userRole = localStorage.getItem("role");
+  const isLocked = userRole === 'MANAGER' && reportStatus === 'submitted';
+
   useEffect(() => {
     fetchTodayEntry(date);
     fetchHistory();
@@ -75,11 +81,10 @@ function DynamicEntryTable({ token }) {
   const fetchTodayEntry = async (queryDate) => {
     try {
       setLoading(true);
-      const res = await axios.get(`http://localhost:5000/api/business/my-entries?date=${queryDate}&t=${Date.now()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(`/business/my-entries?date=${queryDate}&t=${Date.now()}`);
       if (res.data && res.data.entries) {
         setEntryId(res.data.id);
+        setReportStatus(res.data.status || 'draft');
         const mappedEntries = res.data.entries.map((item, index) => ({
           id: item.id || Date.now() + index,
           accountType: item.accountType,
@@ -90,6 +95,7 @@ function DynamicEntryTable({ token }) {
         setEntries(mappedEntries.length > 0 ? mappedEntries : [{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
       } else {
         setEntryId(null);
+        setReportStatus('draft');
         setEntries([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
       }
     } catch (err) {
@@ -101,9 +107,7 @@ function DynamicEntryTable({ token }) {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/business/history?t=${Date.now()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(`/business/history?t=${Date.now()}`);
       setHistory(res.data || []);
     } catch (err) {
       console.error(err);
@@ -154,9 +158,7 @@ function DynamicEntryTable({ token }) {
             remark: e.remark
           }))
         };
-        await axios.put(`http://localhost:5000/api/business/entry/${entryId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.put(`/business/entry/${entryId}`, payload);
         showToast("Row deleted and saved successfully", "success");
         fetchHistory();
       } catch (err) {
@@ -222,16 +224,14 @@ function DynamicEntryTable({ token }) {
 
       if (entryId) {
         // Update existing
-        await axios.put(`http://localhost:5000/api/business/entry/${entryId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.put(`/business/entry/${entryId}`, payload);
+        setReportStatus(statusType);
         alert(`Report ${statusType === 'submitted' ? 'Submitted' : 'Saved as Draft'} successfully!`);
       } else {
         // Create new
-        const res = await axios.post(`http://localhost:5000/api/business/daily-entry`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.post("/business/daily-entry", payload);
         setEntryId(res.data.entryId);
+        setReportStatus(statusType);
         showToast(`Report ${statusType === 'submitted' ? 'Submitted' : 'Saved as Draft'} successfully!`, 'success');
       }
       fetchHistory();
@@ -252,11 +252,10 @@ function DynamicEntryTable({ token }) {
     
     try {
       setLoading(true);
-      await axios.delete(`http://localhost:5000/api/business/entry/${entryId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/business/entry/${entryId}`);
       showToast("Report deleted successfully!", "success");
       setEntryId(null);
+      setReportStatus('draft');
       setEntries([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
       
       await fetchHistory(); // Wait for cache-busted history to load
@@ -294,7 +293,13 @@ function DynamicEntryTable({ token }) {
                   <td>₹ {Number(h.total_amount).toLocaleString()}</td>
                   <td><span className={`status-badge ${h.status === 'submitted' ? 'status-completed-mgr' : 'status-pending-mgr'}`}>{h.status.toUpperCase()}</span></td>
                   <td>
-                    <button onClick={() => { setDate(h.entry_date.split('T')[0]); setViewHistory(false); setCameFromHistory(true); }} className="action-link-btn">
+                    <button onClick={() => { 
+                      const d = new Date(h.entry_date);
+                      const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                      setDate(localDateStr); 
+                      setViewHistory(false); 
+                      setCameFromHistory(true); 
+                    }} className="action-link-btn">
                       View/Edit
                     </button>
                   </td>
@@ -344,6 +349,7 @@ function DynamicEntryTable({ token }) {
                     onChange={(e) => handleChange(entry.id, 'accountType', e.target.value)} 
                     placeholder="Search or Select..."
                     className="form-input"
+                    disabled={isLocked}
                     required
                   />
                   <datalist id="account-types">
@@ -357,6 +363,7 @@ function DynamicEntryTable({ token }) {
                     value={entry.status} 
                     onChange={(e) => handleChange(entry.id, 'status', e.target.value)}
                     className="form-select"
+                    disabled={isLocked}
                     required
                   >
                     <option value="">Select...</option>
@@ -373,6 +380,7 @@ function DynamicEntryTable({ token }) {
                     value={entry.amount} 
                     onChange={(e) => handleChange(entry.id, 'amount', e.target.value)}
                     className="form-input"
+                    disabled={isLocked}
                     placeholder="0.00"
                   />
                 </td>
@@ -382,15 +390,18 @@ function DynamicEntryTable({ token }) {
                     value={entry.remark} 
                     onChange={(e) => handleChange(entry.id, 'remark', e.target.value)}
                     className="form-input"
+                    disabled={isLocked}
                     placeholder="Optional"
                   />
                 </td>
                 <td align="center">
-                  <button type="button" onClick={() => handleRemoveRow(entry.id)} className="icon-btn-delete" title="Remove Row">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </button>
+                  {!isLocked && (
+                    <button type="button" onClick={() => handleRemoveRow(entry.id)} className="icon-btn-delete" title="Remove Row">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                      </svg>
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -399,40 +410,50 @@ function DynamicEntryTable({ token }) {
       </div>
 
       <div className="entry-footer">
-        <button type="button" onClick={handleAddRow} className="add-row-btn">
-          + Add Row
-        </button>
-        <div className="total-calculation">
+        {!isLocked && (
+          <button type="button" onClick={handleAddRow} className="add-row-btn">
+            + Add Row
+          </button>
+        )}
+        <div className="total-calculation" style={{ marginLeft: isLocked ? 'auto' : '0' }}>
           <strong>Total Amount: </strong> 
           <span className="total-val">₹ {totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
         </div>
       </div>
 
       <div className="entry-actions">
-        {entryId && (
-          <button 
-             onClick={() => handleDeleteReport(false)} 
-             disabled={loading} 
-             className="draft-btn" 
-             style={{ backgroundColor: '#EF4444', color: 'white', borderColor: '#DC2626', marginRight: 'auto' }}
-          >
-            {loading ? 'Deleting...' : 'Delete Report'}
-          </button>
+        {isLocked ? (
+          <div className="locked-notice" style={{ color: '#EF4444', fontWeight: 'bold', padding: '10px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>🔒</span> This report has been submitted and is locked for editing.
+          </div>
+        ) : (
+          <>
+            {entryId && (
+              <button 
+                 onClick={() => handleDeleteReport(false)} 
+                 disabled={loading} 
+                 className="draft-btn" 
+                 style={{ backgroundColor: '#EF4444', color: 'white', borderColor: '#DC2626', marginRight: 'auto' }}
+              >
+                {loading ? 'Deleting...' : 'Delete Report'}
+              </button>
+            )}
+            <button 
+              onClick={() => handleSubmit('draft')} 
+              disabled={loading} 
+              className="draft-btn"
+            >
+              {loading ? 'Saving...' : 'Save as Draft'}
+            </button>
+            <button 
+              onClick={() => handleSubmit('submitted')} 
+              disabled={loading} 
+              className="submit-report-btn"
+            >
+              {loading ? 'Submitting...' : 'Submit Final Report'}
+            </button>
+          </>
         )}
-        <button 
-          onClick={() => handleSubmit('draft')} 
-          disabled={loading} 
-          className="draft-btn"
-        >
-          {loading ? 'Saving...' : 'Save as Draft'}
-        </button>
-        <button 
-          onClick={() => handleSubmit('submitted')} 
-          disabled={loading} 
-          className="submit-report-btn"
-        >
-          {loading ? 'Submitting...' : 'Submit Final Report'}
-        </button>
       </div>
     </div>
   );

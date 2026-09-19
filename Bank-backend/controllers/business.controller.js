@@ -101,12 +101,17 @@ exports.updateEntry = (req, res) => {
     const totalEntries = entries ? entries.length : 0;
     const submittedAt = (status === 'submitted' || status === 'SUBMITTED') ? new Date() : null;
 
-    // Verify ownership
-    const checkSql = `SELECT * FROM daily_business_entries WHERE id = ? AND manager_id = ?`;
+    // Verify ownership or check if Admin
+    const checkSql = `SELECT * FROM daily_business_entries WHERE id = ?`;
     
-    db.query(checkSql, [entryId, managerId], (err, results) => {
+    db.query(checkSql, [entryId], (err, results) => {
         if (err) return res.status(500).json({ error: err });
-        if (results.length === 0) return res.status(403).json({ message: "Unauthorized or entry not found" });
+        if (results.length === 0) return res.status(404).json({ message: "Entry not found" });
+
+        // Allow if user is ADMIN, or if the manager matches ownership
+        if (req.user.role !== 'ADMIN' && results[0].manager_id != managerId) {
+            return res.status(403).json({ message: "Unauthorized or entry not found" });
+        }
 
         const updateEntrySql = `
             UPDATE daily_business_entries 
@@ -316,5 +321,23 @@ exports.getReports = (req, res) => {
                 breakdown: breakdownResults
             });
         });
+    });
+};
+
+// 8. ADMIN: Get Branch Submission History
+exports.getBranchHistory = (req, res) => {
+    const { branchId } = req.params;
+
+    const sql = `
+        SELECT id, entry_date, total_amount, status, created_at
+        FROM daily_business_entries
+        WHERE branch_id = ?
+        ORDER BY entry_date DESC
+        LIMIT 20
+    `;
+
+    db.query(sql, [branchId], (err, results) => {
+        if (err) return res.status(500).json({ error: err });
+        res.json(results);
     });
 };
