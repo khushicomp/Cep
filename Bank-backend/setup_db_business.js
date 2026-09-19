@@ -10,7 +10,7 @@ const db = mysql.createConnection({
 
 db.connect((err) => {
     if (err) {
-        console.error("Database connection failed:", err);
+        console.error("Database utility operation failed");
         process.exit(1);
     }
     console.log("Connected to database. Creating tables...");
@@ -43,7 +43,7 @@ db.connect((err) => {
 
     db.query(createEntriesTable, (err1) => {
         if (err1) {
-            console.error("Error creating daily_business_entries:", err1);
+            console.error("Database utility operation failed");
             db.end();
             process.exit(1);
         }
@@ -51,7 +51,7 @@ db.connect((err) => {
 
         db.query(createItemsTable, (err2) => {
             if (err2) {
-                console.error("Error creating daily_business_items:", err2);
+                console.error("Database utility operation failed");
             } else {
                 console.log("Table daily_business_items created or already exists.");
             }

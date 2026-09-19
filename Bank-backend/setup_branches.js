@@ -554,7 +554,7 @@ async function setupBranches() {
         console.log("All 38 branches inserted successfully!");
         
     } catch (err) {
-        console.error("Error setting up branches:", err);
+        console.error("Database utility operation failed");
     } finally {
         if(connection) {
             await connection.query("SET FOREIGN_KEY_CHECKS = 1;");

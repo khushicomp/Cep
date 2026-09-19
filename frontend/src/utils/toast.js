@@ -1,10 +1,12 @@
 export function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-        <span style="font-size: 1.25rem; margin-right: 0.75rem;">${type === 'success' ? '✓' : '✗'}</span>
-        ${message}
-    `;
+    const icon = document.createElement('span');
+    icon.style.fontSize = '1.25rem';
+    icon.style.marginRight = '0.75rem';
+    icon.textContent = type === 'success' ? '✓' : '✗';
+    toast.appendChild(icon);
+    toast.appendChild(document.createTextNode(String(message)));
     document.body.appendChild(toast);
     
     setTimeout(() => {
@@ -21,10 +23,11 @@ export function showLoading() {
     if (document.getElementById('loading-overlay')) return;
     const overlay = document.createElement('div');
     overlay.id = 'loading-overlay';
-    overlay.innerHTML = `
-        <div class="loading-spinner"></div>
-        <p>Processing...</p>
-    `;
+    const spinner = document.createElement('div');
+    spinner.className = 'loading-spinner';
+    const label = document.createElement('p');
+    label.textContent = 'Processing...';
+    overlay.append(spinner, label);
     document.body.appendChild(overlay);
 }
 

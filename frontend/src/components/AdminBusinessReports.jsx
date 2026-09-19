@@ -75,8 +75,8 @@ function AdminBusinessReports() {
       } else if (Array.isArray(res.data)) {
         setBranches(res.data);
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Request failed");
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ function AdminBusinessReports() {
       if (err.response && err.response.status === 404) {
         setBranchDetails({ entries: [] });
       } else {
-        console.error(err);
+        console.error("Request failed");
       }
     } finally {
       setDetailsLoading(false);
@@ -113,8 +113,8 @@ function AdminBusinessReports() {
       setIsEditing(false);
       const res = await api.get(`/business/branch-history/${branchId}`);
       setHistoryList(res.data || []);
-    } catch (err) {
-      console.error("Error fetching branch history:", err);
+    } catch {
+      console.error("Request failed");
     } finally {
       setHistoryLoading(false);
     }
@@ -190,8 +190,8 @@ function AdminBusinessReports() {
       setIsEditing(false);
       fetchBranchDetails(selectedBranch); // Reload details
       fetchAllBranches(); // Reload overview list
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Request failed");
       alert("Failed to update report.");
     }
   };

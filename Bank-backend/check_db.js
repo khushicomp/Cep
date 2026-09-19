@@ -12,13 +12,13 @@ const today = new Date().toISOString().split('T')[0];
 
 console.log("Checking daily entries:");
 db.query("SELECT * FROM daily_business_entries", (err, res) => {
-    if (err) console.error(err);
-    console.log(res);
+    if (err) console.error("Database utility operation failed");
+    console.log("Database query completed");
 
     console.log("\nChecking branches:");
     db.query("SELECT * FROM branches", (err2, res2) => {
-        if (err2) console.error(err2);
-        console.log(res2);
+        if (err2) console.error("Database utility operation failed");
+        console.log("Database query completed");
 
         console.log("\nRunning Admin Query:");
         const sql = `
@@ -37,8 +37,8 @@ db.query("SELECT * FROM daily_business_entries", (err, res) => {
             GROUP BY b.branch_id, e.id
         `;
         db.query(sql, [today], (err3, res3) => {
-            if (err3) console.error(err3);
-            console.log(res3);
+            if (err3) console.error("Database utility operation failed");
+            console.log("Database query completed");
             db.end();
             process.exit();
         });

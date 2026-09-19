@@ -61,7 +61,7 @@ async function seedAllBranchUsers() {
         // Get all branches from DB
         const [dbBranches] = await connection.query("SELECT * FROM branches");
         if (dbBranches.length === 0) {
-            console.error('❌ No branches found! Please run setup_branches.js first.');
+            console.error("Utility operation failed");
             process.exit(1);
         }
         console.log(`✅ Found ${dbBranches.length} branches in database`);
@@ -74,7 +74,6 @@ async function seedAllBranchUsers() {
         // Hash password
         const defaultPassword = 'Test@123';
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-        console.log('🔐 Password hashed: Test@123');
         
         const allUsers = [];
         
@@ -244,7 +243,6 @@ async function seedAllBranchUsers() {
         console.log(`   - Managers: ${managerCount}`);
         console.log(`   - Employees: ${employeeCount}`);
         
-        console.log('\n📋 TEST CREDENTIALS (All passwords: Test@123)\n');
         
         console.log('ADMIN:');
         console.log('   - admin@akolaurban.bank.in\n');
@@ -261,18 +259,15 @@ async function seedAllBranchUsers() {
         
         console.log('\n🧪 TESTING GUIDE:');
         console.log('   Test Branch Isolation:');
-        console.log('   1. Login as: manager.pune@akolaurban.bank.in / Test@123');
         console.log('   2. Submit entry, logout');
-        console.log('   3. Login as: manager.mumbai@akolaurban.bank.in / Test@123');
         console.log('   4. Verify you CANNOT see Pune data ✓\n');
         
         console.log('   Test Admin Oversight:');
-        console.log('   1. Login as: admin@akolaurban.bank.in / Test@123');
         console.log('   2. View "All Branches" dashboard');
         console.log('   3. Verify you CAN see ALL 38 branches ✓\n');
         
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error("Utility operation failed");
         process.exit(1);
     } finally {
         if(connection) {

@@ -21,7 +21,7 @@ exports.assignTask = (req, res) => {
 
   db.query(sql, [task_name, assigned_by, assigned_to, branch_id, branch_code, branch_name, description || null, priority || 'medium', due_date || null], (err, result) => {
     if (err) {
-      return res.status(500).json({ error: err });
+      return res.status(500).json({ message: "Internal server error" });
     }
 
     res.status(201).json({
@@ -64,13 +64,11 @@ exports.getMyTasks = (req, res) => {
 
   db.query(sql, [employeeId], (err, results) => {
     if (err) {
-      return res.status(500).json({ error: err });
+      return res.status(500).json({ message: "Internal server error" });
     }
 
     res.json(results);
   });
-  console.log("Decoded user:", req.user);
-  console.log("Employee ID:", req.user.user_id);
 
 };
 
@@ -90,13 +88,6 @@ exports.updateTask = (req, res) => {
   const userId = req.user.user_id;
 
   const validStatuses = ["PENDING", "IN_PROGRESS", "COMPLETED"];
-
-   console.log("Updating task:", {
-  taskId,
-  status,
-  time_taken,
-  userId
-});
 
   // Basic validations
   if (!status || time_taken === undefined) {
@@ -120,7 +111,7 @@ exports.updateTask = (req, res) => {
   `;
 
   db.query(checkSql, [taskId, userId], (err, results) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) return res.status(500).json({ message: "Internal server error" });
 
     if (results.length === 0) {
       return res.status(403).json({ message: "Unauthorized access" });
@@ -135,7 +126,7 @@ exports.updateTask = (req, res) => {
     `;
 
     db.query(lastStatusSql, [taskId], (err2, statusResults) => {
-      if (err2) return res.status(500).json({ error: err2 });
+      if (err2) return res.status(500).json({ message: "Internal server error" });
 
       if (
         statusResults.length > 0 &&
@@ -154,7 +145,7 @@ exports.updateTask = (req, res) => {
       `;
 
       db.query(insertSql, [taskId, status, time_taken], (err3) => {
-        if (err3) return res.status(500).json({ error: err3 });
+        if (err3) return res.status(500).json({ message: "Internal server error" });
 
         res.json({ message: "Task updated successfully" });
       });
@@ -179,7 +170,7 @@ exports.getRecentTasks = (req, res) => {
   `;
 
   db.query(countSql, [branchId], (err, countResult) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) return res.status(500).json({ message: "Internal server error" });
 
     const totalRecords = countResult[0].total;
     const totalPages = Math.ceil(totalRecords / limit);
@@ -207,7 +198,7 @@ exports.getRecentTasks = (req, res) => {
     `;
 
     db.query(dataSql, [branchId, limit, offset], (err2, results) => {
-      if (err2) return res.status(500).json({ error: err2 });
+      if (err2) return res.status(500).json({ message: "Internal server error" });
 
       res.json({
         currentPage: page,

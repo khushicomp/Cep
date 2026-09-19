@@ -13,8 +13,8 @@ exports.getBranchEmployees = (req, res) => {
 
   db.query(sql, [branchId], (err, results) => {
     if (err) {
-      console.error(err);
-      return res.status(500).json({ error: err });
+      console.error("Database or request operation failed");
+      return res.status(500).json({ message: "Internal server error" });
     }
 
     res.json(results);
@@ -44,7 +44,7 @@ exports.getEmployeeReport = (req, res) => {
   `;
 
   db.query(sql, [employeeId], (err, results) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) return res.status(500).json({ message: "Internal server error" });
 
     const data = results[0] || {};
 
@@ -102,7 +102,7 @@ exports.getBranchReport = (req, res) => {
     `;
 
   db.query(sql, [branchId], (err, results) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) return res.status(500).json({ message: "Internal server error" });
 
     const data = results[0] || {};
 
@@ -160,7 +160,7 @@ exports.getWeeklyTrend = (req, res) => {
   const params = isAdmin ? [] : [req.user.branch_id];
 
   db.query(sql, params, (err, results) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) return res.status(500).json({ message: "Internal server error" });
 
     res.json(results || []);
   });
@@ -192,7 +192,7 @@ exports.getAllBranchesReport = (req, res) => {
 
   db.query(sql, (err, results) => {
 if (err) {
-  console.error("All Branch Report Error:", err);
+  console.error("Database or request operation failed");
   return res.status(500).json({ error: "Database error" });
 }
 
@@ -239,7 +239,7 @@ ORDER BY MIN(tu.update_date)
   `;
 
   db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) return res.status(500).json({ message: "Internal server error" });
 
     res.json(results);
   });

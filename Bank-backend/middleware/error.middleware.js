@@ -1,8 +1,11 @@
 exports.errorHandler = (err, req, res, next) => {
-  console.error(err);
+  console.error("Request failed");
 
-  res.status(err.status || 500).json({
+  if (res.headersSent) return next(err);
+  const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 600
+    ? err.status : 500;
+  res.status(status).json({
     success: false,
-    message: err.message || "Internal Server Error"
+    message: status >= 500 ? "Internal Server Error" : "Invalid request"
   });
 };

@@ -36,7 +36,7 @@ function Login() {
       const message =
         err.response?.data?.message || "Invalid credentials or server error";
       setError(message);
-      console.error(err);
+      console.error("Request failed");
     }
   };
 

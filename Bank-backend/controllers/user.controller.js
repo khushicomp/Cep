@@ -33,7 +33,7 @@ exports.createUser = async (req, res) => {
         if (err.code === "ER_DUP_ENTRY") {
           return res.status(400).json({ message: "User with this email already exists" });
         }
-        console.error("Error creating user:", err);
+        console.error("Database or request operation failed");
         return res.status(500).json({ message: "Database error while creating user" });
       }
 
@@ -51,7 +51,7 @@ exports.createUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Server error:", error);
+    console.error("Database or request operation failed");
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -68,7 +68,7 @@ exports.getEmployees = (req, res) => {
     }
     
     db.query(sql, params, (err, results) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
         res.json({ success: true, employees: results });
     });
 };

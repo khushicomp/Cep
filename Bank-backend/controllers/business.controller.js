@@ -20,7 +20,7 @@ exports.createDailyEntry = (req, res) => {
     `;
 
     db.query(insertEntrySql, [branch_id, branch_code, branch_name, managerId, managerName, date, totalAmount, totalEntries, status || 'draft', submittedAt], (err, entryResult) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
 
         const entryId = entryResult.insertId;
 
@@ -39,7 +39,7 @@ exports.createDailyEntry = (req, res) => {
         ]);
 
         db.query(insertItemsSql, [itemValues], (err2) => {
-            if (err2) return res.status(500).json({ error: err2 });
+            if (err2) return res.status(500).json({ message: "Internal server error" });
             res.status(201).json({ message: "Daily business entry saved successfully", entryId });
         });
     });
@@ -62,7 +62,7 @@ exports.getMyEntries = (req, res) => {
     `;
 
     db.query(sql, [managerId, date], (err, results) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
 
         if (results.length === 0) {
             return res.json(null);
@@ -105,7 +105,7 @@ exports.updateEntry = (req, res) => {
     const checkSql = `SELECT * FROM daily_business_entries WHERE id = ?`;
     
     db.query(checkSql, [entryId], (err, results) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
         if (results.length === 0) return res.status(404).json({ message: "Entry not found" });
 
         // Allow if user is ADMIN, or if the manager matches ownership
@@ -120,12 +120,12 @@ exports.updateEntry = (req, res) => {
         `;
         
         db.query(updateEntrySql, [totalAmount, totalEntries, status, submittedAt, entryId], (err2) => {
-            if (err2) return res.status(500).json({ error: err2 });
+            if (err2) return res.status(500).json({ message: "Internal server error" });
 
             const deleteItemsSql = `DELETE FROM daily_business_items WHERE entry_id = ?`;
             
             db.query(deleteItemsSql, [entryId], (err3) => {
-                if (err3) return res.status(500).json({ error: err3 });
+                if (err3) return res.status(500).json({ message: "Internal server error" });
 
                 if (!entries || entries.length === 0) {
                     return res.json({ message: "Entry updated successfully" });
@@ -146,7 +146,7 @@ exports.updateEntry = (req, res) => {
                 ]);
 
                 db.query(insertItemsSql, [itemValues], (err4) => {
-                    if (err4) return res.status(500).json({ error: err4 });
+                    if (err4) return res.status(500).json({ message: "Internal server error" });
                     res.json({ message: "Entry updated successfully" });
                 });
             });
@@ -162,7 +162,7 @@ exports.deleteEntry = (req, res) => {
     const checkSql = `SELECT * FROM daily_business_entries WHERE id = ?`;
     
     db.query(checkSql, [entryId], (err, results) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
         if (results.length === 0) return res.status(404).json({ message: "Entry not found" });
 
         // Admins could potentially delete any, but for now we enforce manager ownership
@@ -172,11 +172,11 @@ exports.deleteEntry = (req, res) => {
 
         const deleteItemsSql = `DELETE FROM daily_business_items WHERE entry_id = ?`;
         db.query(deleteItemsSql, [entryId], (err2) => {
-            if (err2) return res.status(500).json({ error: err2 });
+            if (err2) return res.status(500).json({ message: "Internal server error" });
 
             const deleteEntrySql = `DELETE FROM daily_business_entries WHERE id = ?`;
             db.query(deleteEntrySql, [entryId], (err3) => {
-                if (err3) return res.status(500).json({ error: err3 });
+                if (err3) return res.status(500).json({ message: "Internal server error" });
                 res.json({ success: true, message: "Entry deleted successfully" });
             });
         });
@@ -206,7 +206,7 @@ exports.getAllBranchesSummary = (req, res) => {
     `;
 
     db.query(sql, [today], (err, results) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
         
         const grandTotal = results.reduce((sum, b) => sum + Number(b.totalAmount), 0);
         
@@ -239,7 +239,7 @@ exports.getBranchDetails = (req, res) => {
     `;
 
     db.query(sql, [branchId, date], (err, results) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
 
         if (results.length === 0) {
             return res.status(404).json({ message: "No entry found for this branch on the given date" });
@@ -285,7 +285,7 @@ exports.getHistory = (req, res) => {
     `;
 
     db.query(sql, [managerId], (err, results) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
         res.json(results);
     });
 };
@@ -302,7 +302,7 @@ exports.getReports = (req, res) => {
     `;
 
     db.query(sql, [], (err, results) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
         
         // Detailed breakdown
         const breakdownSql = `
@@ -314,7 +314,7 @@ exports.getReports = (req, res) => {
         `;
         
         db.query(breakdownSql, [], (err2, breakdownResults) => {
-            if (err2) return res.status(500).json({ error: err2 });
+            if (err2) return res.status(500).json({ message: "Internal server error" });
             
             res.json({
                 overall: results[0] || { totalBusiness: 0, totalAccountsOpened: 0 },
@@ -337,7 +337,7 @@ exports.getBranchHistory = (req, res) => {
     `;
 
     db.query(sql, [branchId], (err, results) => {
-        if (err) return res.status(500).json({ error: err });
+        if (err) return res.status(500).json({ message: "Internal server error" });
         res.json(results);
     });
 };

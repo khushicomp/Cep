@@ -8,14 +8,14 @@ const db = mysql.createConnection({
 });
 
 db.query('SELECT * FROM daily_business_entries', (err, results) => {
-    if (err) console.error(err);
+    if (err) console.error("Database utility operation failed");
     console.log("=== ENTRIES ===");
-    console.log(JSON.stringify(results, null, 2));
+    console.log("Database query completed");
 
     db.query('SELECT * FROM daily_business_items', (err2, results2) => {
-        if (err2) console.error(err2);
+        if (err2) console.error("Database utility operation failed");
         console.log("=== ITEMS ===");
-        console.log(JSON.stringify(results2, null, 2));
+        console.log("Database query completed");
         process.exit();
     });
 });

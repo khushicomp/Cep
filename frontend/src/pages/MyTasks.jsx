@@ -13,8 +13,8 @@ function MyTasks() {
     try {
       const res = await getMyTasks();
       setTasks(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Request failed");
       alert("Failed to fetch tasks");
     } finally {
       setLoading(false);
@@ -35,8 +35,8 @@ function MyTasks() {
 
       alert("Task updated successfully!");
       fetchTasks();
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Request failed");
       alert("Update failed");
     }
   };

@@ -74,8 +74,8 @@ function ManagerDashboard() {
     try {
       const res = await api.get("/reports/branch-employees");
       setEmployees(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Request failed");
     }
   };
 
@@ -83,8 +83,8 @@ function ManagerDashboard() {
     try {
       const res = await api.get("/reports/branch");
       setReport(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Request failed");
     }
   };
 
@@ -92,8 +92,8 @@ function ManagerDashboard() {
     try {
       const res = await api.get("/reports/weekly-trend");
       setWeeklyData(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Request failed");
     }
   };
 
@@ -117,8 +117,8 @@ function ManagerDashboard() {
         setCurrentPage(1);
         setTotalPages(1);
       }
-    } catch (err) {
-      console.error("Error fetching recent tasks:", err);
+    } catch {
+      console.error("Request failed");
       setRecentTasks([]);
       setCurrentPage(1);
       setTotalPages(1);
@@ -146,9 +146,9 @@ function ManagerDashboard() {
       fetchBranchReport();
       fetchWeeklyTrend();
       fetchRecentTasks(currentPage);
-    } catch (err) {
+    } catch {
       showToast("Error assigning task", "error");
-      console.error(err);
+      console.error("Request failed");
     }
   };
 

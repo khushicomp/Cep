@@ -31,7 +31,7 @@ async function runMigrations() {
             `);
             console.log("Added new columns to users table.");
         } catch (e) {
-            console.log("Users alter error (might exist already):", e.message);
+            console.error("Database utility operation failed");
         }
 
         // DAILY BUSINESS ENTRIES: Add fields
@@ -46,7 +46,7 @@ async function runMigrations() {
             `);
             console.log("Added new columns to daily_business_entries table.");
         } catch (e) {
-            console.log("Entries alter error:", e.message);
+            console.error("Database utility operation failed");
         }
 
         // TASKS: Add fields
@@ -65,7 +65,7 @@ async function runMigrations() {
             `);
             console.log("Added new columns to tasks table.");
         } catch (e) {
-            console.log("Tasks alter error:", e.message);
+            console.error("Database utility operation failed");
         }
 
         // Now, let's sync up existing users with branch_code and branch_name from branches table
@@ -96,7 +96,7 @@ async function runMigrations() {
         console.log("Migrations applied successfully!");
         
     } catch (err) {
-        console.error("Migration unexpected error:", err);
+        console.error("Database utility operation failed");
     } finally {
         if(connection) {
             await connection.end();

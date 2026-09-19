@@ -32,11 +32,10 @@ async function seedTestUsers() {
                  `, [user.name, user.email, user.password, user.role, user.branch_id, user.phone, user.joining_date, user.is_active, user.can_view_all_branches]);
              }
         }
-        console.log("Test users created successfully! Password for all is: Test@123");
         console.log("For full branch/employee seeding, use: node scripts/seed-all-users.js");
         
     } catch (err) {
-        console.error("Error setting up users:", err);
+        console.error("Utility operation failed");
     } finally {
         if(connection) await connection.end();
     }

@@ -6,7 +6,6 @@ const token = jwt.sign({ user_id: 1, role: 'MANAGER', branch_id: 1 }, process.en
 
 async function run() {
     try {
-        console.log("Token:", token);
         const response = await fetch('http://localhost:5000/api/business/entry/1', {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }
@@ -14,7 +13,7 @@ async function run() {
         const data = await response.json();
         console.log('Delete response:', data);
     } catch (err) {
-        console.error('Delete failed:', err.message);
+        console.error("Utility operation failed");
     }
 }
 run();

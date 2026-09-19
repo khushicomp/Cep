@@ -22,11 +22,7 @@ app.use(express.json());
 
 
 // Routes
-const testRoutes = require("./routes/test.routes");
-app.use("/api", testRoutes);
-
-const dbTestRoutes = require("./routes/dbTest.routes");
-app.use("/api", dbTestRoutes);
+// Development/test routes are deliberately not exposed by the application.
 
 const authRoutes = require("./routes/auth.routes");
 app.use("/api/auth", authRoutes);

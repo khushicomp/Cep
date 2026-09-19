@@ -14,8 +14,8 @@ function AdminBusinessAnalytics() {
     try {
       const res = await api.get('/business/reports');
       setReportData(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Request failed");
     } finally {
       setLoading(false);
     }

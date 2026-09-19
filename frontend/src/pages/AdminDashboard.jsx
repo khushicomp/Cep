@@ -52,8 +52,8 @@ function AdminDashboard() {
     try {
       const res = await api.get("/reports/all-branches");
       setBranches(res.data);
-    } catch (err) {
-      console.error("Error fetching branches:", err);
+    } catch {
+      console.error("Request failed");
     }
   };
 
@@ -61,8 +61,8 @@ function AdminDashboard() {
     try {
       const res = await api.get("/reports/weekly-trend");
       setWeeklyData(res.data);
-    } catch (err) {
-      console.error("Error fetching weekly trend:", err);
+    } catch {
+      console.error("Request failed");
     }
   };
 
@@ -73,8 +73,8 @@ const fetchMonthlyData = async () => {
     const res = await api.get("/reports/admin/monthly");
 
     setMonthlyData(res.data);
-  } catch (err) {
-    console.error(err);
+  } catch {
+    console.error("Request failed");
   }
 };
 

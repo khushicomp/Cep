@@ -37,8 +37,8 @@ function EmployeeDashboard() {
     try {
       const res = await api.get("/tasks/my-tasks");
       setTasks(res.data);
-    } catch (err) {
-      console.error("Error fetching tasks:", err);
+    } catch {
+      console.error("Request failed");
     }
   };
 
@@ -46,8 +46,8 @@ function EmployeeDashboard() {
     try {
       const res = await api.get("/reports/employee");
       setReport(res.data);
-    } catch (err) {
-      console.error("Error fetching report:", err);
+    } catch {
+      console.error("Request failed");
     }
   };
 

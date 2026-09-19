@@ -98,8 +98,8 @@ function DynamicEntryTable() {
         setReportStatus('draft');
         setEntries([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
       }
-    } catch (err) {
-      console.error('Failed to fetch entry for date', err);
+    } catch {
+      console.error("Request failed");
     } finally {
       setLoading(false);
     }
@@ -109,8 +109,8 @@ function DynamicEntryTable() {
     try {
       const res = await api.get(`/business/history?t=${Date.now()}`);
       setHistory(res.data || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error("Request failed");
     }
   };
 
@@ -161,9 +161,9 @@ function DynamicEntryTable() {
         await api.put(`/business/entry/${entryId}`, payload);
         showToast("Row deleted and saved successfully", "success");
         fetchHistory();
-      } catch (err) {
+      } catch {
         showToast("Failed to save changes", "error");
-        console.error("Error saving entry:", err);
+        console.error("Request failed");
       } finally {
         setLoading(false);
       }
@@ -235,9 +235,9 @@ function DynamicEntryTable() {
         showToast(`Report ${statusType === 'submitted' ? 'Submitted' : 'Saved as Draft'} successfully!`, 'success');
       }
       fetchHistory();
-    } catch (err) {
+    } catch {
       showToast("Error saving report.", "error");
-      console.error(err);
+      console.error("Request failed");
     } finally {
       setLoading(false);
     }

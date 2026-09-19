@@ -14,14 +14,11 @@ exports.login = (req, res) => {
 
   db.query(sql, [email], async (err, results) => {
 
-    console.log("Email received from frontend:", email);
-
     if (err) {
-      console.error(err);
+      console.error("Authentication database query failed");
       return res.status(500).json({ message: "Server error" });
     }
 
-    console.log("Database results:", results);
 
 
     if (results.length === 0) {
@@ -50,7 +47,7 @@ exports.login = (req, res) => {
         can_view_all_branches: user.can_view_all_branches
       },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "10h" }
     );
 
     return res.json({
