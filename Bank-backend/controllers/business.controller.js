@@ -30,6 +30,7 @@ exports.rejectUnlock = handler((req, body) => reports.rejectUnlock(req.user, req
 exports.getEntry = handler(req => reports.read(req.user, { entryId: req.params.id }));
 exports.getMyEntries = handler(req => reports.read(req.user, { date: req.query.date }));
 exports.getHistory = handler(req => reports.history(req.user));
+exports.getDailyOverview = handler(req => reports.dailyOverview(req.user, req.query.date));
 
 // Validation errors are handled here because these legacy read handlers use callbacks.
 function readInput(res, validate) {
@@ -132,13 +133,15 @@ exports.getBranchDetails = (req, res) => {
 
 // 7. ADMIN: Analytics / Reports Summary
 exports.getReports = (req, res) => {
-    // For now we do a simple aggregated sum for all time or today. If date range is provided, can filter.
+    // All-time/all-branch semantics retained. Aggregate headers and items separately:
+    // joining headers to items before SUM repeats each header once per item.
     const sql = `
         SELECT 
-            SUM(e.total_amount) as totalBusiness,
-            COUNT(i.id) as totalAccountsOpened
+            COALESCE(SUM(e.total_amount), 0) as totalBusiness,
+            COUNT(*) as totalReports,
+            COUNT(DISTINCT e.branch_id) as reportedBranches,
+            (SELECT COUNT(*) FROM daily_business_items) as totalAccountsOpened
         FROM daily_business_entries e
-        LEFT JOIN daily_business_items i ON e.id = i.entry_id
     `;
 
     db.query(sql, [], (err, results) => {

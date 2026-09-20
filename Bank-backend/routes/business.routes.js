@@ -7,6 +7,7 @@ const { allowRoles } = require("../middleware/role.middleware");
 const manager = allowRoles("MANAGER");
 const centralReader = allowRoles("ADMIN", "HEAD_OFFICE");
 router.use(verifyToken);
+router.get("/head-office/daily-overview", allowRoles("HEAD_OFFICE"), business.getDailyOverview);
 
 // Branch tenancy comes only from the verified user inside report queries.
 router.post("/daily-entry", manager, business.createDailyEntry);

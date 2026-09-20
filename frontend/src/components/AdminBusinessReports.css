@@ -529,6 +529,17 @@
 }
 
 /* Filter Buttons */
+.daily-operations-header, .daily-date-controls, .daily-operation-totals { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.daily-operations-header { justify-content: space-between; margin-bottom: 1rem; }
+.daily-operation-counts { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.daily-operation-totals { margin: 1rem 0; }
+.daily-operations-table { overflow-x: auto; }
+.operations-status-not_started { background: #e5e7eb; color: #374151; }
+.operations-status-draft { background: #fef3c7; color: #92400e; }
+.operations-status-submitted { background: #dbeafe; color: #1e40af; }
+.operations-status-correction_pending { background: #ffedd5; color: #9a3412; }
+.operations-status-final_locked { background: #dcfce7; color: #166534; }
+.operations-status-unknown, .operations-exception { background: #fee2e2; color: #991b1b; border: 1px solid #991b1b; }
 .filter-btn { padding: 6px 16px; border: 1px solid #E5E7EB; background: white; color: #4B5563; border-radius: 20px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
 .filter-btn:hover { background: #F3F4F6; color: #1F2937; }
 .filter-btn.active { background: #FF6B35; color: white; border-color: #FF6B35; box-shadow: 0 2px 4px rgba(255, 107, 53, 0.2); }

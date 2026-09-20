@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import { businessToday } from '../utils/businessDate';
 import { showToast } from '../utils/toast';
 import './AdminBusinessReports.css';
+import DailyOperationsOverview from './DailyOperationsOverview';
 
 const ACCOUNT_TYPE_OPTIONS = [
   { group: 'DEPOSITS', label: 'Savings Account (SB)' },
@@ -53,6 +54,11 @@ function AdminBusinessReports() {
   const [date, setDate] = useState(businessToday());
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [overview, setOverview] = useState(null);
+  const [overviewError, setOverviewError] = useState('');
+  const overviewRequest = useRef({ version: 0 });
+  const detailRequest = useRef(0);
+  const [detailError, setDetailError] = useState('');
   const [districtFilter, setDistrictFilter] = useState("ALL");
   
   const [selectedBranch, setSelectedBranch] = useState(null);
@@ -67,48 +73,69 @@ function AdminBusinessReports() {
   const [editEntries, setEditEntries] = useState([]);
   const [editEntryId, setEditEntryId] = useState(null);
 
-  useEffect(() => {
-    fetchAllBranches();
-  }, [date]);
-
-  const fetchAllBranches = async () => {
+  const fetchAllBranches = useCallback(async () => {
+    const request = ++overviewRequest.current.version;
     try {
       setLoading(true);
-      const res = await api.get(`/business/all-branches?date=${date}&t=${Date.now()}`);
+      setOverviewError('');
+      const endpoint = isHeadOffice ? 'head-office/daily-overview' : 'all-branches';
+      const res = await api.get(`/business/${endpoint}?date=${encodeURIComponent(date)}&t=${Date.now()}`);
+      if (request !== overviewRequest.current.version) return;
+      if (isHeadOffice) {
+        if (res.data?.date !== date || !Array.isArray(res.data.branches) || !res.data.summary) throw new Error('Invalid overview response');
+        setOverview(res.data);
+        return;
+      }
       if (res.data.branches) {
         setBranches(res.data.branches);
       } else if (Array.isArray(res.data)) {
         setBranches(res.data);
       }
     } catch {
-      console.error("Request failed");
+      if (request !== overviewRequest.current.version) return;
+      setOverview(null);
+      setBranches([]);
+      setOverviewError('Unable to load branch data. Please retry.');
     } finally {
-      setLoading(false);
+      if (request === overviewRequest.current.version) setLoading(false);
     }
-  };
+  }, [date, isHeadOffice]);
+
+  useEffect(() => {
+    const requests = overviewRequest.current;
+    fetchAllBranches();
+    return () => { requests.version++; };
+  }, [fetchAllBranches]);
+
+  useEffect(() => () => { detailRequest.current++; }, []);
 
   const fetchBranchDetails = async (branchId, reportDate = date) => {
+    const request = ++detailRequest.current;
     try {
       setDetailsLoading(true);
+      setDetailError('');
+      setBranchDetails(null);
       setSelectedBranch(branchId);
       const res = await api.get(`/business/branch/${branchId}?date=${reportDate}&t=${Date.now()}`);
+      if (request !== detailRequest.current) return;
       setBranchDetails(res.data);
     } catch (err) {
-      if (err.response && err.response.status === 404) {
-        setBranchDetails({ entries: [] });
-      } else {
-        console.error("Request failed");
-      }
+      if (request !== detailRequest.current) return;
+      setDetailError(err.response?.status === 404 ? 'No report exists for this branch and date.' : 'Unable to load report details. Return to the overview and retry.');
     } finally {
-      setDetailsLoading(false);
+      if (request === detailRequest.current) setDetailsLoading(false);
     }
   };
 
   const handleBack = () => {
+    detailRequest.current++;
+    setDetailsLoading(false);
+    setDetailError('');
     setSelectedBranch(null);
     setBranchDetails(null);
     setViewHistory(false);
     setIsEditing(false);
+    fetchAllBranches();
   };
 
   const handleFinalLock = async () => {
@@ -260,6 +287,13 @@ function AdminBusinessReports() {
       alert("Failed to update report.");
     }
   };
+
+  if (selectedBranch && !viewHistory && (detailsLoading || detailError)) {
+    return <div className="admin-reports-container">
+      <button className="back-btn" disabled={finalLocking} onClick={handleBack}>Back to All Branches</button>
+      <p role={detailError ? 'alert' : 'status'}>{detailError || 'Loading report details...'}</p>
+    </div>;
+  }
 
   if (viewHistory) {
     return (
@@ -457,7 +491,7 @@ function AdminBusinessReports() {
               </>}
             </div>
           )}
-          <p><strong>Manager:</strong> {branchDetails.manager_name || 'N/A'} | <strong>Date:</strong> {date}</p>
+          <p><strong>Manager:</strong> {branchDetails.manager_name || 'N/A'} | <strong>Date:</strong> {branchDetails.entry_date}</p>
         </div>
 
         <table className="data-table">
@@ -495,6 +529,13 @@ function AdminBusinessReports() {
         </div>
       </div>
     );
+  }
+
+  if (isHeadOffice) {
+    return <DailyOperationsOverview date={date} onDateChange={setDate}
+      overview={overview?.date === date ? overview : null}
+      loading={loading || (!overviewError && overview?.date !== date)} error={overviewError}
+      onRefresh={fetchAllBranches} onView={branch => fetchBranchDetails(branch.branch_id, date)} />;
   }
 
   const totalBranches = branches.length;

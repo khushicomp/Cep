@@ -161,6 +161,45 @@ function createReportService(pool) {
         });
     }
     return {
+        async dailyOverview(user, selectedDate) {
+            if (user?.role !== 'HEAD_OFFICE') fail(403, 'Only Head Office may view daily operations');
+            const date = calendarDate(selectedDate === undefined ? businessToday() : selectedDate);
+            // One header per branch/date is guaranteed by unique_branch_entry_date.
+            // Keep date in the JOIN so branches without a report remain visible.
+            const rows = await query(`SELECT b.branch_id, b.branch_code, b.branch_name, b.branch_district,
+                e.id AS entry_id, e.status, e.unlock_requested, e.total_amount, e.total_entries,
+                DATE_FORMAT(e.submitted_at, '%Y-%m-%d %H:%i:%s') AS submitted_at
+                FROM branches b LEFT JOIN daily_business_entries e
+                    ON e.branch_id = b.branch_id AND e.entry_date = ?
+                WHERE b.is_active = 1 ORDER BY b.branch_name, b.branch_id`, [date]);
+            const summary = { totalBranches: rows.length, notStarted: 0, draft: 0, submitted: 0,
+                correctionPending: 0, finalLocked: 0, unknown: 0, reportedBranches: 0, totalAmount: '0.00', totalEntries: 0 };
+            const buckets = { NOT_STARTED: 'notStarted', DRAFT: 'draft', SUBMITTED: 'submitted',
+                CORRECTION_PENDING: 'correctionPending', FINAL_LOCKED: 'finalLocked', UNKNOWN: 'unknown' };
+            let cents = 0n;
+            const branches = rows.map(row => {
+                const exists = row.entry_id != null;
+                const status = exists ? normalizeStatus(row.status) : null;
+                const pending = exists && pendingRequest(row.unlock_requested) ? 1 : 0;
+                const displayStatus = !exists ? 'NOT_STARTED' : status === 'SUBMITTED' && pending ? 'CORRECTION_PENDING' :
+                    ['DRAFT', 'SUBMITTED', 'FINAL_LOCKED'].includes(status) ? status : 'UNKNOWN';
+                const amount = exists ? money(row.total_amount ?? '0') : 0n;
+                const count = exists ? Number(row.total_entries ?? 0) : 0;
+                if (!Number.isSafeInteger(count) || count < 0) throw new Error('Invalid persisted report item count');
+                summary[buckets[displayStatus]]++;
+                if (exists) summary.reportedBranches++;
+                summary.totalEntries += count;
+                cents += amount;
+                return { branch_id: row.branch_id, branch_code: row.branch_code, branch_name: row.branch_name,
+                    branch_district: row.branch_district, entry_id: exists ? row.entry_id : null, date,
+                    lifecycle_status: exists ? (['DRAFT', 'SUBMITTED', 'FINAL_LOCKED'].includes(status) ? status : 'UNKNOWN') : null,
+                    display_status: displayStatus, unlock_requested: pending, total_amount: decimal(amount),
+                    total_entries: count, submitted_at: exists ? row.submitted_at : null };
+            });
+            // Decimal strings preserve cents even when the all-branch sum exceeds JS safe integers.
+            summary.totalAmount = decimal(cents);
+            return { date, branches, summary };
+        },
         requestUnlock: (user, entryId, body) => correction(user, entryId, body, 'UNLOCK_REQUEST'),
         approveUnlock: (user, entryId) => correction(user, entryId, {}, 'UNLOCK_APPROVE'),
         rejectUnlock: (user, entryId, body) => correction(user, entryId, body, 'UNLOCK_REJECT'),

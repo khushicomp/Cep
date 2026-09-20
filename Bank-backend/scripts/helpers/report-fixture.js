@@ -88,7 +88,7 @@ function fixture(options = {}) {
             return { affectedRows: 1 };
         }
         if (sql.includes('FROM branches b LEFT JOIN daily_business_entries')) return [{ _id: 5, status: 'submitted', totalAmount: '10.25' }, { _id: 8, status: 'FINAL_LOCKED', totalAmount: '20.00' }];
-        if (sql.includes('SUM(e.total_amount) as totalBusiness')) return [{ totalBusiness: '20.50' }];
+        if (sql.includes('COALESCE(SUM(e.total_amount), 0) as totalBusiness')) return [{ totalBusiness: '20.50', totalReports: 2, reportedBranches: 2, totalAccountsOpened: 2 }];
         if (sql.includes('SELECT account_type, COUNT(*)')) return [];
         throw new Error('Unexpected mocked query: ' + sql);
     }
