@@ -23,6 +23,10 @@ exports.createDailyEntry = handler((req, body) => reports.create(req.user, body)
 exports.updateEntry = handler((req, body) => reports.update(req.user, req.params.id, body));
 exports.deleteEntry = handler(req => reports.remove(req.user, req.params.id));
 exports.submitEntry = handler(req => reports.submit(req.user, req.params.id));
+exports.finalLockEntry = handler(req => reports.finalLock(req.user, req.params.id));
+exports.requestUnlock = handler((req, body) => reports.requestUnlock(req.user, req.params.id, body));
+exports.approveUnlock = handler(req => reports.approveUnlock(req.user, req.params.id));
+exports.rejectUnlock = handler((req, body) => reports.rejectUnlock(req.user, req.params.id, body));
 exports.getEntry = handler(req => reports.read(req.user, { entryId: req.params.id }));
 exports.getMyEntries = handler(req => reports.read(req.user, { date: req.query.date }));
 exports.getHistory = handler(req => reports.history(req.user));
@@ -106,6 +110,8 @@ exports.getBranchDetails = (req, res) => {
             entry_date: results[0].entry_date,
             total_amount: results[0].total_amount,
             status: normalizeStatus(results[0].status),
+            unlock_requested: Number(results[0].unlock_requested) === 1 ? 1 : 0,
+            unlock_reason: Number(results[0].unlock_requested) === 1 ? results[0].unlock_reason : null,
             entries: []
         };
 

@@ -1,10 +1,18 @@
 // Report-only rules. No connection is opened until a method is called.
+const { insertMilestone } = require('./business-audit.service');
 class ReportError extends Error {
     constructor(status, message) { super(message); this.status = status; }
 }
 const fail = (status, message) => { throw new ReportError(status, message); };
 const normalizeStatus = value => typeof value === 'string' ? value.trim().toUpperCase() : '';
 const centralRoles = ['ADMIN', 'HEAD_OFFICE'];
+const pendingRequest = value => Number(value) === 1;
+function correctionReason(value) {
+    if (typeof value !== 'string' || !value.trim() || [...value.trim()].length > 1000) {
+        fail(400, 'Provide a correction reason of 1 to 1000 characters');
+    }
+    return value.trim();
+}
 function id(value) {
     if (!/^[1-9]\d*$/.test(String(value)) || !Number.isSafeInteger(Number(value)) || Number(value) > 2147483647) {
         fail(400, 'Invalid report or branch ID');
@@ -118,10 +126,44 @@ function createReportService(pool) {
             submitted_at = ? WHERE id = ? AND branch_id = ?`,
         [data.totalAmount, data.totalEntries, status, status === 'SUBMITTED' ? new Date() : null, entryId, branch]);
     }
+    async function submitMilestone(c, entry, user, data) {
+        await writeHeader(c, entry.id, entry.branch_id, data, 'SUBMITTED');
+        await insertMilestone(c, { entryId: entry.id, branchId: entry.branch_id, actor: user,
+            action: 'SUBMIT', previousStatus: normalizeStatus(entry.status), newStatus: 'SUBMITTED' });
+    }
     function result(entryId, status, data) {
         return { entryId: Number(entryId), status, totalAmount: data.totalAmount, totalEntries: data.totalEntries };
     }
+    async function correction(user, entryId, body, action) {
+        const requesting = action === 'UNLOCK_REQUEST';
+        const branch = requesting ? manager(user, body) : null;
+        if (!requesting && user?.role !== 'HEAD_OFFICE') fail(403, 'Only Head Office may resolve correction requests');
+        id(user.user_id);
+        const reportId = id(entryId);
+        const reason = action === 'UNLOCK_APPROVE' ? null : correctionReason(body.reason);
+        return transaction(async c => {
+            const [rows] = await c.query(`SELECT id, branch_id, status, unlock_requested, unlock_reason FROM daily_business_entries
+                WHERE id = ?${requesting ? ' AND branch_id = ?' : ''} FOR UPDATE`, requesting ? [reportId, branch] : [reportId]);
+            if (!rows.length) fail(404, 'Report not found');
+            const entry = rows[0];
+            const previousPending = pendingRequest(entry.unlock_requested) ? 1 : 0;
+            if (normalizeStatus(entry.status) !== 'SUBMITTED' || previousPending !== (requesting ? 0 : 1)) {
+                fail(409, requesting ? 'Only SUBMITTED reports without a pending request may request correction' : 'A SUBMITTED report with a pending request is required');
+            }
+            const status = action === 'UNLOCK_APPROVE' ? 'DRAFT' : 'SUBMITTED';
+            const pending = requesting ? 1 : 0;
+            await c.query(`UPDATE daily_business_entries SET status = ?, unlock_requested = ?, unlock_reason = ?${action === 'UNLOCK_APPROVE' ? ', submitted_at = NULL' : ''}
+                WHERE id = ? AND branch_id = ?`, [status, pending, requesting ? reason : null, entry.id, entry.branch_id]);
+            await insertMilestone(c, { entryId: entry.id, branchId: entry.branch_id, actor: user, action,
+                previousStatus: 'SUBMITTED', newStatus: status, previousPending, newPending: pending,
+                requestReason: entry.unlock_reason, reason: action === 'UNLOCK_APPROVE' ? entry.unlock_reason : reason });
+            return { entryId: Number(entry.id), status, unlock_requested: pending, unlock_reason: requesting ? reason : null };
+        });
+    }
     return {
+        requestUnlock: (user, entryId, body) => correction(user, entryId, body, 'UNLOCK_REQUEST'),
+        approveUnlock: (user, entryId) => correction(user, entryId, {}, 'UNLOCK_APPROVE'),
+        rejectUnlock: (user, entryId, body) => correction(user, entryId, body, 'UNLOCK_REJECT'),
         async create(user, body) {
             const branch = manager(user, body);
             const date = calendarDate(body.date ?? body.entry_date);
@@ -141,7 +183,7 @@ function createReportService(pool) {
                 [branch, m.branch_code, m.branch_name, id(user.user_id), m.manager_name, date, data.totalAmount, data.totalEntries, 'DRAFT', null]);
                 await insertItems(c, header.insertId, data.items);
                 // Preserve the existing create-and-submit UI, as one atomic transition.
-                if (status === 'SUBMITTED') await writeHeader(c, header.insertId, branch, data, status);
+                if (status === 'SUBMITTED') await submitMilestone(c, { id: header.insertId, branch_id: branch, status: 'DRAFT' }, user, data);
                 return result(header.insertId, status, data);
             });
         },
@@ -156,7 +198,8 @@ function createReportService(pool) {
                 const data = itemsData(body.entries);
                 await c.query('DELETE FROM daily_business_items WHERE entry_id = ?', [entry.id]);
                 await insertItems(c, entry.id, data.items);
-                await writeHeader(c, entry.id, branch, data, status);
+                if (status === 'SUBMITTED') await submitMilestone(c, entry, user, data);
+                else await writeHeader(c, entry.id, branch, data, status);
                 return result(entry.id, status, data);
             });
         },
@@ -164,7 +207,7 @@ function createReportService(pool) {
             const branch = manager(user);
             return transaction(async c => {
                 const entry = await lockedDraft(c, entryId, branch);
-                // The existing audit FK still cascades until Phase 1 is authorized.
+                // Preserve the friendly refusal in addition to the restrictive audit FK.
                 const [audit] = await c.query('SELECT id FROM daily_business_audit_logs WHERE entry_id = ? LIMIT 1 FOR UPDATE', [entry.id]);
                 if (audit.length) fail(409, 'Reports with audit history cannot be deleted');
                 await c.query('DELETE FROM daily_business_items WHERE entry_id = ?', [entry.id]);
@@ -180,8 +223,27 @@ function createReportService(pool) {
                 const [items] = await c.query(`SELECT sr_no AS srNo, account_type AS accountType, status, amount, remark
                     FROM daily_business_items WHERE entry_id = ? ORDER BY sr_no, id FOR UPDATE`, [entry.id]);
                 const data = itemsData(items);
-                await writeHeader(c, entry.id, branch, data, 'SUBMITTED');
+                await submitMilestone(c, entry, user, data);
                 return result(entry.id, 'SUBMITTED', data);
+            });
+        },
+        async finalLock(user, entryId) {
+            if (user?.role !== 'HEAD_OFFICE') fail(403, 'Only Head Office may final-lock reports');
+            id(user.user_id);
+            const reportId = id(entryId);
+            return transaction(async c => {
+                const [rows] = await c.query(`SELECT id, branch_id, status, unlock_requested FROM daily_business_entries
+                    WHERE id = ? FOR UPDATE`, [reportId]);
+                if (!rows.length) fail(404, 'Report not found');
+                const entry = rows[0];
+                const previousStatus = normalizeStatus(entry.status);
+                if (previousStatus !== 'SUBMITTED') fail(409, 'Only SUBMITTED reports may be final-locked');
+                if (pendingRequest(entry.unlock_requested)) fail(409, 'Resolve the pending correction request before final locking');
+                await c.query('UPDATE daily_business_entries SET status = ? WHERE id = ? AND branch_id = ?',
+                    ['FINAL_LOCKED', entry.id, entry.branch_id]);
+                await insertMilestone(c, { entryId: entry.id, branchId: entry.branch_id, actor: user,
+                    action: 'FINAL_LOCK', previousStatus, newStatus: 'FINAL_LOCKED' });
+                return { entryId: Number(entry.id), status: 'FINAL_LOCKED' };
             });
         },
         async read(user, { entryId, date }) {
@@ -203,6 +265,8 @@ function createReportService(pool) {
             const first = rows[0];
             return { id: first.id, branch_id: first.branch_id, manager_id: first.manager_id,
                 entry_date: first.entry_date, total_amount: first.total_amount, status: normalizeStatus(first.status),
+                unlock_requested: pendingRequest(first.unlock_requested) ? 1 : 0,
+                unlock_reason: pendingRequest(first.unlock_requested) ? first.unlock_reason : null,
                 entries: rows.filter(r => r.item_id != null).map(r => ({ id: r.item_id, srNo: r.sr_no,
                     accountType: r.account_type, status: r.item_status, amount: r.amount, remark: r.remark })) };
         },

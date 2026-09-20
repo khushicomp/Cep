@@ -144,9 +144,14 @@ async function prepare(connection) {
         if (matching.length) {
             const existing = matching[0];
             if (['RESTRICT', 'NO ACTION'].includes(existing.DELETE_RULE) && ['RESTRICT', 'NO ACTION'].includes(existing.UPDATE_RULE)) return;
+            // MySQL cannot drop/add the same FK name in one ALTER. Use the
+            // deterministic target name only if it is unused across the schema.
+            if (foreignKeys.some(f => f.CONSTRAINT_NAME.toLowerCase() === name.toLowerCase())) {
+                blocked.push(`Foreign key name collision: ${name}`); return;
+            }
             // One ALTER replaces the relationship; never drop the audit table or its rows.
             add(`Replace destructive relationship on ${table}.${column} with RESTRICT`,
-                `ALTER TABLE ${qi(table)} DROP FOREIGN KEY ${qi(existing.CONSTRAINT_NAME)}, ADD CONSTRAINT ${qi(existing.CONSTRAINT_NAME)} FOREIGN KEY (${qi(column)}) REFERENCES ${qi(parent)} (${qi(parentColumn)}) ON DELETE RESTRICT ON UPDATE RESTRICT`);
+                `ALTER TABLE ${qi(table)} DROP FOREIGN KEY ${qi(existing.CONSTRAINT_NAME)}, ADD CONSTRAINT ${qi(name)} FOREIGN KEY (${qi(column)}) REFERENCES ${qi(parent)} (${qi(parentColumn)}) ON DELETE RESTRICT ON UPDATE RESTRICT`);
         } else {
             if (foreignKeys.some(f => f.CONSTRAINT_NAME === name)) { blocked.push(`Foreign key name collision: ${name}`); return; }
             add(`Add restrictive relationship on ${table}.${column}`,
@@ -213,10 +218,12 @@ async function main() {
         if (!args.includes('--apply')) {
             console.log('READ-ONLY INSPECTION ONLY. MIGRATION EXECUTED: NO');
         } else {
+            if (plan.blocked.length) throw new PreparationError('Pre-flight checks are blocked; no migration steps were applied');
             // No transaction wrapper: MySQL DDL commits independently.
             for (const step of plan.steps) {
                 console.log(`Applying: ${step.description}`);
                 await connection.query(step.sql);
+                console.log(`Completed: ${step.description}`);
             }
             console.log('Prepared safe steps applied. Review any blocked portions.');
         }

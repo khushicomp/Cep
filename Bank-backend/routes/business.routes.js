@@ -16,8 +16,12 @@ router.get("/entry/:id", allowRoles("MANAGER", "ADMIN", "HEAD_OFFICE"), business
 router.put("/entry/:id", manager, business.updateEntry);
 router.delete("/entry/:id", manager, business.deleteEntry);
 router.post("/entry/:id/submit", manager, business.submitEntry);
+router.post("/entry/:id/final-lock", allowRoles("HEAD_OFFICE"), business.finalLockEntry);
+router.post("/entry/:id/unlock-request", manager, business.requestUnlock);
+router.post("/entry/:id/unlock-approve", allowRoles("HEAD_OFFICE"), business.approveUnlock);
+router.post("/entry/:id/unlock-reject", allowRoles("HEAD_OFFICE"), business.rejectUnlock);
 
-// Transitional central roles have read access only to business reports.
+// Transitional ADMIN remains a central reader; final-lock authority is separate.
 router.get("/all-branches", centralReader, business.getAllBranchesSummary);
 router.get("/branch/:id", centralReader, business.getBranchDetails);
 router.get("/reports", centralReader, business.getReports);

@@ -8,3 +8,4 @@ dist/
 *.p12
 *.pfx
 *.log
+.database-backups/

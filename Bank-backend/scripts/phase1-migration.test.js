@@ -11,7 +11,7 @@ function fixture(options = {}) {
     const tables = {
         daily_business_entries: [column('id'), column('branch_id'), column('manager_id'), column('entry_date', 'date'),
             column('status', options.enumStatus ? "enum('LEGACY','DRAFT')" : 'varchar(50)', 'YES', 'DRAFT'),
-            column('unlock_requested', 'tinyint(1)', options.done ? 'NO' : 'YES', '0'), column('unlock_reason', 'text', 'YES')],
+            column('unlock_requested', 'tinyint(1)', options.done || options.partial ? 'NO' : 'YES', '0'), column('unlock_reason', 'text', 'YES')],
         daily_business_items: [column('id'), column('entry_id')],
         branches: [column('branch_id')],
         users: [column('user_id'), column('role', options.legacyRole ? "enum('EMPLOYEE','MANAGER','ADMIN')" : "enum('EMPLOYEE','MANAGER','ADMIN','HEAD_OFFICE')", 'NO', 'MANAGER')],
@@ -25,7 +25,10 @@ function fixture(options = {}) {
     });
     const fks = [fk('daily_business_audit_logs', 'entry_id', 'daily_business_entries', 'id', options.done ? 'RESTRICT' : 'CASCADE'),
         fk('daily_business_audit_logs', 'branch_id', 'branches', 'branch_id'), fk('daily_business_audit_logs', 'actor_id', 'users', 'user_id')];
-    if (options.done) fks.push(fk('daily_business_entries', 'branch_id', 'branches', 'branch_id'), fk('daily_business_entries', 'manager_id', 'users', 'user_id'));
+    if (options.partial) fks[0].CONSTRAINT_NAME = 'daily_business_audit_logs_ibfk_1';
+    if (options.renamed) fks[0].CONSTRAINT_NAME = 'phase1_audit_entry_fk';
+    if (options.collision) fks.push({ ...fk('other_table', 'entry_id', 'daily_business_entries', 'id'), CONSTRAINT_NAME: 'PHASE1_AUDIT_ENTRY_FK' });
+    if (options.done || options.partial) fks.push(fk('daily_business_entries', 'branch_id', 'branches', 'branch_id'), fk('daily_business_entries', 'manager_id', 'users', 'user_id'));
     return { query: async (sql, params = []) => {
         assert.match(sql.trim(), /^(SELECT|SHOW)\b/, 'planner must never execute DDL or DML');
         if (sql.includes('SELECT ENGINE')) return [[...(options.noAudit && params[0] === 'daily_business_audit_logs' ? [] : [{ ENGINE: 'InnoDB' }])]];
@@ -62,6 +65,24 @@ test('observed schema yields four safe steps including audit cascade replacement
 test('completed schema is a no-op on rerun', async () => {
     assert.deepEqual((await prepare(fixture({ done: true }))).steps, []);
 });
+test('partial migration recovery replaces only the audit cascade with a new deterministic name', async () => {
+    const plan = await prepare(fixture({ partial: true }));
+    assert.deepEqual(plan.blocked, []);
+    assert.equal(plan.steps.length, 1);
+    assert.equal(plan.steps[0].sql, 'ALTER TABLE `daily_business_audit_logs` DROP FOREIGN KEY `daily_business_audit_logs_ibfk_1`, ADD CONSTRAINT `phase1_audit_entry_fk` FOREIGN KEY (`entry_id`) REFERENCES `daily_business_entries` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT');
+});
+test('completed recovery with renamed restrictive FK plans zero DDL on repeated inspection', async () => {
+    for (let i = 0; i < 2; i++) {
+        const plan = await prepare(fixture({ done: true, renamed: true }));
+        assert.deepEqual(plan.blocked, []);
+        assert.deepEqual(plan.steps, []);
+    }
+});
+test('replacement name collision anywhere in schema blocks rather than dropping the existing FK', async () => {
+    const plan = await prepare(fixture({ partial: true, collision: true }));
+    assert.deepEqual(plan.steps, []);
+    assert.deepEqual(plan.blocked, ['Foreign key name collision: phase1_audit_entry_fk']);
+});
 test('duplicates, orphans and null flags block only their unsafe portions', async () => {
     const plan = await prepare(fixture({ noUnique: true, duplicates: true, orphans: true, nullUnlock: true }));
     assert.equal(plan.blocked.length, 3);
@@ -81,4 +102,26 @@ test('missing audit table is created with restrictive relationships only', async
     const ddl = plan.steps.find(s => /CREATE TABLE/.test(s.sql)).sql;
     assert.equal((ddl.match(/ON DELETE RESTRICT/g) || []).length, 3);
     assert.doesNotMatch(ddl, /CASCADE/);
+});
+
+test('explicit apply stops all DDL when any pre-flight finding is blocked', async () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const vm = require('node:vm');
+    const source = fs.readFileSync(path.join(__dirname, 'phase1-migration.js'), 'utf8');
+    const main = source.slice(source.indexOf('async function main()'), source.indexOf('module.exports ='));
+    let queries = 0, closed = false;
+    const context = {
+        process: { argv: ['node', 'phase1-migration.js', '--apply'], env: {} },
+        path, __dirname, console: { log() {} }, PreparationError: Error,
+        require: () => ({ config() {} }),
+        mysql: { createConnection: async () => ({
+            query: async () => { queries++; }, end: async () => { closed = true; }
+        }) },
+        prepare: async () => ({ blocked: ['Orphaned references'], steps: [{ description: 'Must not execute', sql: 'ALTER TABLE example ADD COLUMN example INT' }] })
+    };
+    vm.runInNewContext(main, context);
+    await assert.rejects(context.main(), /no migration steps were applied/);
+    assert.equal(queries, 0);
+    assert.equal(closed, true);
 });

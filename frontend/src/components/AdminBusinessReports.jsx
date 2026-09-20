@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { businessToday } from '../utils/businessDate';
+import { showToast } from '../utils/toast';
 import './AdminBusinessReports.css';
 
 const ACCOUNT_TYPE_OPTIONS = [
@@ -46,7 +47,9 @@ const STATUS_OPTIONS = [
 ];
 
 function AdminBusinessReports() {
-  const canEditReports = false; // Central report mutations are deferred. Both central roles are read-only.
+  const canEditReports = false; // Direct central editing remains deferred.
+  const isHeadOffice = localStorage.getItem('role') === 'HEAD_OFFICE';
+  const [finalLocking, setFinalLocking] = useState(false);
   const [date, setDate] = useState(businessToday());
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -106,6 +109,66 @@ function AdminBusinessReports() {
     setBranchDetails(null);
     setViewHistory(false);
     setIsEditing(false);
+  };
+
+  const handleFinalLock = async () => {
+    if (!isHeadOffice || finalLocking || detailsLoading || !branchDetails?.id ||
+        String(branchDetails.status).trim().toUpperCase() !== 'SUBMITTED' || Number(branchDetails.unlock_requested) === 1) return;
+    const target = branchDetails;
+    if (!window.confirm(`Final-lock the report for ${target.branch_name || 'this branch'} on ${target.entry_date}? This seals the report.`)) return;
+    setFinalLocking(true);
+    try {
+      const res = await api.post(`/business/entry/${target.id}/final-lock`);
+      setBranchDetails(current => current?.id === target.id ? { ...current, status: res.data.status } : current);
+      showToast('Report final-locked successfully');
+      await fetchBranchDetails(target.branch_id, target.entry_date);
+      await fetchAllBranches();
+    } catch (err) {
+      if (err.response?.status === 409) {
+        // Disable stale actions even if reconciliation cannot reach the server.
+        setBranchDetails(current => current?.id === target.id ? { ...current, status: '' } : current);
+        await fetchBranchDetails(target.branch_id, target.entry_date);
+        await fetchAllBranches();
+      }
+      showToast(err.response?.data?.message || 'Unable to final-lock report', 'error');
+    } finally {
+      setFinalLocking(false);
+    }
+  };
+
+  const resolveCorrection = async (approve) => {
+    if (!isHeadOffice || finalLocking || detailsLoading || !branchDetails?.id ||
+        String(branchDetails.status).trim().toUpperCase() !== 'SUBMITTED' || Number(branchDetails.unlock_requested) !== 1) return;
+    const target = branchDetails;
+    let reason;
+    if (approve) {
+      if (!window.confirm(`Approve correction for ${target.branch_name || 'this branch'} on ${target.entry_date}? The report will reopen as DRAFT.`)) return;
+    } else {
+      reason = window.prompt('Reason for rejecting correction (1–1000 characters):');
+      if (reason === null) return;
+      reason = reason.trim();
+      if (!reason || [...reason].length > 1000) {
+        showToast('Enter a rejection reason of 1 to 1000 characters', 'error');
+        return;
+      }
+    }
+    setFinalLocking(true);
+    try {
+      const res = await api.post(`/business/entry/${target.id}/unlock-${approve ? 'approve' : 'reject'}`, approve ? {} : { reason });
+      setBranchDetails(current => current?.id === target.id ? { ...current, ...res.data } : current);
+      showToast(approve ? 'Correction approved; report reopened as DRAFT' : 'Correction request rejected');
+      await fetchBranchDetails(target.branch_id, target.entry_date);
+      await fetchAllBranches();
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setBranchDetails(current => current?.id === target.id ? { ...current, status: '' } : current);
+        await fetchBranchDetails(target.branch_id, target.entry_date);
+        await fetchAllBranches();
+      }
+      showToast(err.response?.data?.message || 'Unable to resolve correction request', 'error');
+    } finally {
+      setFinalLocking(false);
+    }
   };
 
   const fetchBranchHistory = async (branchId) => {
@@ -367,8 +430,8 @@ function AdminBusinessReports() {
     return (
       <div className="admin-reports-container">
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="back-btn" onClick={handleBack}>← Back to All Branches</button>
-          <button className="history-btn" onClick={() => fetchBranchHistory(selectedBranch)} style={{ padding: '0.5rem 1rem', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+          <button className="back-btn" onClick={handleBack} disabled={finalLocking}>← Back to All Branches</button>
+          <button className="history-btn" disabled={finalLocking} onClick={() => fetchBranchHistory(selectedBranch)} style={{ padding: '0.5rem 1rem', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
             📜 View Submission History
           </button>
           {canEditReports && branchDetails.id && (
@@ -376,9 +439,24 @@ function AdminBusinessReports() {
               ✏️ Edit Report
             </button>
           )}
+          {isHeadOffice && String(branchDetails.status).trim().toUpperCase() === 'SUBMITTED' && Number(branchDetails.unlock_requested) !== 1 && (
+            <button className="submit-report-btn" onClick={handleFinalLock} disabled={finalLocking || detailsLoading}>
+              {finalLocking ? 'Final locking...' : 'Final Lock'}
+            </button>
+          )}
         </div>
         <div className="details-header">
           <h2>Branch Details: {branchDetails.branch_name || 'N/A'}</h2>
+          <p><strong>Report status:</strong> {String(branchDetails.status || 'Unavailable').toUpperCase()}</p>
+          {String(branchDetails.status).trim().toUpperCase() === 'SUBMITTED' && Number(branchDetails.unlock_requested) === 1 && (
+            <div>
+              <p role="status"><strong>Correction requested:</strong> {branchDetails.unlock_reason}</p>
+              {isHeadOffice && <>
+                <button disabled={finalLocking || detailsLoading} onClick={() => resolveCorrection(true)}>Approve Correction</button>
+                <button disabled={finalLocking || detailsLoading} onClick={() => resolveCorrection(false)}>Reject Correction</button>
+              </>}
+            </div>
+          )}
           <p><strong>Manager:</strong> {branchDetails.manager_name || 'N/A'} | <strong>Date:</strong> {date}</p>
         </div>
 

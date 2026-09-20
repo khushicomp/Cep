@@ -56,6 +56,9 @@ function DynamicEntryTable() {
   const [loading, setLoading] = useState(false);
   const [entryId, setEntryId] = useState(null); // If editing existing
   const [reportStatus, setReportStatus] = useState('DRAFT');
+  const [unlockRequested, setUnlockRequested] = useState(false);
+  const [unlockReason, setUnlockReason] = useState(null);
+  const [requestingCorrection, setRequestingCorrection] = useState(false);
   const [history, setHistory] = useState([]);
   const [viewHistory, setViewHistory] = useState(false);
   const [cameFromHistory, setCameFromHistory] = useState(false);
@@ -74,6 +77,8 @@ function DynamicEntryTable() {
       if (res.data && res.data.entries) {
         setEntryId(res.data.id);
         setReportStatus((res.data.status || '').toUpperCase());
+        setUnlockRequested(Number(res.data.unlock_requested) === 1);
+        setUnlockReason(res.data.unlock_reason);
         const mappedEntries = res.data.entries.map((item, index) => ({
           id: item.id || Date.now() + index,
           accountType: item.accountType,
@@ -85,6 +90,8 @@ function DynamicEntryTable() {
       } else {
         setEntryId(null);
         setReportStatus('DRAFT');
+        setUnlockRequested(false);
+        setUnlockReason(null);
         setEntries([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
       }
     } catch {
@@ -100,6 +107,32 @@ function DynamicEntryTable() {
       setHistory(res.data || []);
     } catch {
       console.error("Request failed");
+    }
+  };
+
+  const requestCorrection = async () => {
+    if (localStorage.getItem('role') !== 'MANAGER' || loading || requestingCorrection || !entryId || reportStatus !== 'SUBMITTED' || unlockRequested) return;
+    const reason = window.prompt('Why does this report need correction? (1–1000 characters)');
+    if (reason === null) return;
+    if (!reason.trim() || [...reason.trim()].length > 1000) {
+      showToast('Enter a reason of 1 to 1000 characters', 'error');
+      return;
+    }
+    setRequestingCorrection(true);
+    try {
+      const res = await api.post(`/business/entry/${entryId}/unlock-request`, { reason: reason.trim() });
+      setUnlockRequested(Number(res.data.unlock_requested) === 1);
+      setUnlockReason(res.data.unlock_reason);
+      showToast('Correction request sent to Head Office');
+      await fetchTodayEntry(date);
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setReportStatus('UNAVAILABLE');
+        await fetchTodayEntry(date);
+      }
+      showToast(err.response?.data?.message || 'Unable to request correction', 'error');
+    } finally {
+      setRequestingCorrection(false);
     }
   };
 
@@ -309,8 +342,8 @@ function DynamicEntryTable() {
         <h2 style={{ flex: 1, margin: 0 }}>Daily Business Entry</h2>
         <div className="entry-controls">
           <label>Date: </label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} max={businessToday()} />
-          <button className="history-btn" onClick={() => setViewHistory(true)}>View History</button>
+          <input type="date" value={date} disabled={loading || requestingCorrection} onChange={(e) => setDate(e.target.value)} max={businessToday()} />
+          <button className="history-btn" disabled={requestingCorrection} onClick={() => setViewHistory(true)}>View History</button>
         </div>
       </div>
 
@@ -410,6 +443,13 @@ function DynamicEntryTable() {
       </div>
 
       <div className="entry-actions">
+        {reportStatus === 'SUBMITTED' && (unlockRequested ? (
+          <p role="status">Correction approval pending. Reason: {unlockReason}</p>
+        ) : localStorage.getItem('role') === 'MANAGER' && (
+          <button className="draft-btn" disabled={loading || requestingCorrection} onClick={requestCorrection}>
+            {requestingCorrection ? 'Requesting...' : 'Request Correction'}
+          </button>
+        ))}
         {isLocked ? (
           <div className="locked-notice" style={{ color: '#EF4444', fontWeight: 'bold', padding: '10px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>🔒</span> This report is {reportStatus} and cannot be edited.
