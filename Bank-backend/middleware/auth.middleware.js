@@ -23,19 +23,3 @@ exports.verifyToken = (req, res, next) => {
     next();
   });
 };
-
-exports.isAdminOrManager = (req, res, next) => {
-  if (req.user && (req.user.role === "ADMIN" || req.user.role === "MANAGER")) {
-    next();
-  } else {
-    res.status(403).json({ message: "Access denied: Requires Admin or Manager role" });
-  }
-};
-
-exports.isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === "ADMIN") {
-    next();
-  } else {
-    res.status(403).json({ message: "Access denied: Requires Admin role" });
-  }
-};

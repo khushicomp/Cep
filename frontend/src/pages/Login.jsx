@@ -25,12 +25,12 @@ function Login() {
         localStorage.setItem("user", JSON.stringify(user));
       }
 
-      if (role === "EMPLOYEE") {
-        navigate("/employee");
-      } else if (role === "MANAGER") {
+      if (role === "MANAGER") {
         navigate("/manager");
       } else if ((role === "ADMIN" || role === "HEAD_OFFICE")) {
         navigate("/admin");
+      } else {
+        setError("This account has no supported reporting workspace. Contact your Branch Manager.");
       }
     } catch (err) {
       const message =

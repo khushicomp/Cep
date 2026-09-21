@@ -28,14 +28,16 @@ test('login keeps response shape and signs a ten-hour token without logging rows
 });
 
 test('controller database failures never serialize driver secrets', async () => {
-    for (const name of ['business', 'task', 'report', 'user', 'dbTest']) {
+    // Legacy task/report/user/debug controllers were removed in Phase 5A.
+    // Preserve the core business error-disclosure assertions.
+    for (const name of ['business']) {
         const source = fs.readFileSync(path.join(__dirname, `../controllers/${name}.controller.js`), 'utf8');
         const context = { exports: {}, console: { error() {} }, require: module => module === '../services/business-report.service' ? require(module) : module === 'bcryptjs' ? {} : {
             promise: () => ({ query: async () => { throw new Error('private SQL error'); } }),
             query: (...args) => args.at(-1)({ sql: 'private SQL', sqlMessage: 'private value', password: 'private hash' })
         } };
         vm.runInNewContext(source, context);
-        const method = { business: 'getHistory', task: 'getMyTasks', report: 'getEmployeeReport', user: 'getEmployees', dbTest: 'dbTest' }[name];
+        const method = 'getHistory';
         let status, body;
         await context.exports[method]({ user: { user_id: 1, branch_id: 1, role: 'MANAGER' }, branchFilter: {} }, {
             status(value) { status = value; return this; }, json(value) { body = value; }

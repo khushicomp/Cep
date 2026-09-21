@@ -1,3 +1,7 @@
+// Historical branch catalogue and destructive bootstrap; see DATABASE_UTILITIES.md.
+if (require.main !== module || !process.argv.includes('--allow-historical-schema-write')) {
+    throw new Error('Historical utility disabled by default. Review DATABASE_UTILITIES.md before explicit isolated use.');
+}
 require("dotenv").config();
 const mysql = require("mysql2/promise");
 

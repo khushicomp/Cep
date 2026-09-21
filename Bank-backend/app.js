@@ -22,19 +22,9 @@ app.use(express.json());
 
 
 // Routes
-// Development/test routes are deliberately not exposed by the application.
 
 const authRoutes = require("./routes/auth.routes");
 app.use("/api/auth", authRoutes);
-
-const taskRoutes = require("./routes/task.routes");
-app.use("/api/tasks", taskRoutes);
-
-const reportRoutes = require("./routes/report.routes");
-app.use("/api/reports", reportRoutes);
-
-const userRoutes = require("./routes/user.routes");
-app.use("/api/users", userRoutes);
 
 const businessRoutes = require("./routes/business.routes");
 app.use("/api/business", businessRoutes);
@@ -44,7 +34,7 @@ const { errorHandler } = require("./middleware/error.middleware");
 app.use(errorHandler);
 
 app.get("/", (req,res) => {
-    res.send("Bank Task Monitoring Backend Running");
+    res.send("Bank Branch Reporting Backend Running");
 });
 
 module.exports = app;

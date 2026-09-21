@@ -3,7 +3,3 @@ export function clearSession() {
   localStorage.removeItem("role");
   localStorage.removeItem("user");
 }
-
-export function getToken() {
-  return localStorage.getItem("token");
-}

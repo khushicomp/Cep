@@ -9,3 +9,6 @@ dist/
 *.pfx
 *.log
 .database-backups/
+.DS_Store
+Thumbs.db
+.idea/
