@@ -3,6 +3,7 @@ import './DynamicEntryTable.css';
 import { showToast } from '../utils/toast';
 import api from '../services/api';
 import { businessToday } from '../utils/businessDate';
+import ReportAuditHistory from './ReportAuditHistory';
 
 const ACCOUNT_TYPE_OPTIONS = [
   // Group 1: DEPOSITS
@@ -483,6 +484,8 @@ function DynamicEntryTable() {
           </>
         )}
       </div>
+      {entryId && !loading && localStorage.getItem('role') === 'MANAGER' &&
+        <ReportAuditHistory key={entryId} entryId={entryId} revision={`${reportStatus}:${unlockRequested}`} />}
     </div>
   );
 }

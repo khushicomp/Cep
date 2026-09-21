@@ -31,6 +31,7 @@ exports.getEntry = handler(req => reports.read(req.user, { entryId: req.params.i
 exports.getMyEntries = handler(req => reports.read(req.user, { date: req.query.date }));
 exports.getHistory = handler(req => reports.history(req.user));
 exports.getDailyOverview = handler(req => reports.dailyOverview(req.user, req.query.date));
+exports.getAuditHistory = handler(req => reports.auditHistory(req.user, req.params.id));
 
 // Validation errors are handled here because these legacy read handlers use callbacks.
 function readInput(res, validate) {

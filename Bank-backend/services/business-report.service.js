@@ -1,5 +1,5 @@
 // Report-only rules. No connection is opened until a method is called.
-const { insertMilestone } = require('./business-audit.service');
+const { insertMilestone, publicEvent } = require('./business-audit.service');
 class ReportError extends Error {
     constructor(status, message) { super(message); this.status = status; }
 }
@@ -161,6 +161,19 @@ function createReportService(pool) {
         });
     }
     return {
+        async auditHistory(user, entryId) {
+            if (!['HEAD_OFFICE', 'MANAGER'].includes(user?.role)) fail(403, 'Audit history access denied');
+            const branch = user.role === 'MANAGER' ? manager(user) : null;
+            const reportId = id(entryId);
+            const reports = await query(`SELECT id, branch_id FROM daily_business_entries WHERE id = ?${branch === null ? '' : ' AND branch_id = ?'}`,
+                branch === null ? [reportId] : [reportId, branch]);
+            if (!reports.length) fail(404, 'Report not found');
+            const rows = await query(`SELECT id, action, actor_name, actor_role,
+                DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at, reason, previous_state, new_state
+                FROM daily_business_audit_logs WHERE entry_id = ? AND branch_id = ? ORDER BY created_at ASC, id ASC`,
+            [reports[0].id, reports[0].branch_id]);
+            return rows.map(publicEvent);
+        },
         async dailyOverview(user, selectedDate) {
             if (user?.role !== 'HEAD_OFFICE') fail(403, 'Only Head Office may view daily operations');
             const date = calendarDate(selectedDate === undefined ? businessToday() : selectedDate);

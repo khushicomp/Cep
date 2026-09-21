@@ -1,0 +1,5 @@
+.report-audit-history { margin-top: 1.5rem; padding: 1rem; border: 1px solid #d1d5db; border-radius: 8px; }
+.report-audit-history ol { padding-left: 1.5rem; }
+.report-audit-history li { padding: 0.75rem 0; border-bottom: 1px solid #e5e7eb; }
+.report-audit-history li:last-child { border-bottom: 0; }
+.report-audit-history .audit-reason { white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -4,6 +4,7 @@ import { businessToday } from '../utils/businessDate';
 import { showToast } from '../utils/toast';
 import './AdminBusinessReports.css';
 import DailyOperationsOverview from './DailyOperationsOverview';
+import ReportAuditHistory from './ReportAuditHistory';
 
 const ACCOUNT_TYPE_OPTIONS = [
   { group: 'DEPOSITS', label: 'Savings Account (SB)' },
@@ -527,6 +528,7 @@ function AdminBusinessReports() {
         <div className="details-footer">
           <h3>Total: ₹ {Number(branchDetails.total_amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</h3>
         </div>
+        {isHeadOffice && branchDetails.id && <ReportAuditHistory key={branchDetails.id} entryId={branchDetails.id} revision={branchDetails} />}
       </div>
     );
   }
