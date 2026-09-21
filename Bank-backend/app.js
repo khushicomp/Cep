@@ -2,22 +2,19 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 require("dotenv").config();
+const { validateEnvironment, corsOptions } = require('./config/security');
+const security = validateEnvironment();
 
 const app = express();
+app.set('trust proxy', security.trustProxy);
+app.disable('x-powered-by');
 
 // Global Middlewares (Order matters)
-app.use(helmet());
+app.use(helmet({ referrerPolicy: { policy: 'no-referrer' },
+  strictTransportSecurity: security.production ? { maxAge: 31536000, includeSubDomains: true } : false }));
 
-const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim());
-
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
-
-app.use(express.json());
+app.use(cors(corsOptions(security.origins)));
+app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 
 
 
@@ -25,6 +22,8 @@ app.use(express.json());
 
 const authRoutes = require("./routes/auth.routes");
 app.use("/api/auth", authRoutes);
+
+app.use(express.json({ limit: '1mb' }));
 
 const businessRoutes = require("./routes/business.routes");
 app.use("/api/business", businessRoutes);

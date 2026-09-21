@@ -7,10 +7,11 @@ const read = file => fs.readFileSync(path.join(__dirname, '../..', file), 'utf8'
 
 test('application mounts only auth/business APIs, with all report operations preserved', () => {
     const mounts = [];
-    const app = { use(...args) { if (typeof args[0] === 'string') mounts.push(args[0]); }, get() {} };
+    const app = { use(...args) { if (typeof args[0] === 'string') mounts.push(args[0]); }, get() {}, set() {}, disable() {} };
     const context = { module: { exports: {} }, process: { env: {} }, require(name) {
         if (name === 'express') return Object.assign(() => app, { json: () => () => {} });
         if (name === 'dotenv') return { config() {} };
+        if (name === './config/security') return { validateEnvironment: () => ({ production: false, origins: ['http://localhost:5173'], trustProxy: false }), corsOptions: () => ({}) };
         if (name === 'cors' || name === 'helmet') return () => () => {};
         if (name === './middleware/error.middleware') return { errorHandler() {} };
         assert.ok(['./routes/auth.routes', './routes/business.routes'].includes(name), `Unexpected runtime module ${name}`);
