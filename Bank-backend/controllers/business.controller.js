@@ -89,10 +89,9 @@ exports.getBranchDetails = (req, res) => {
     if (!readInput(res, () => calendarDate(date))) return;
 
     const sql = `
-        SELECT e.*, DATE_FORMAT(e.entry_date, '%Y-%m-%d') AS entry_date, i.id as item_id, i.sr_no, i.account_type, i.status as item_status, i.amount, i.remark, b.branch_name, u.name as manager_name
+        SELECT e.*, DATE_FORMAT(e.entry_date, '%Y-%m-%d') AS entry_date, i.id as item_id, i.sr_no, i.account_type, i.status as item_status, i.amount, i.remark, b.branch_name
         FROM daily_business_entries e
         JOIN branches b ON e.branch_id = b.branch_id
-        LEFT JOIN users u ON e.manager_id = u.user_id
         LEFT JOIN daily_business_items i ON e.id = i.entry_id
         WHERE e.branch_id = ? AND e.entry_date = ?
     `;

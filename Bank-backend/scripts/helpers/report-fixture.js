@@ -137,7 +137,7 @@ function httpHarness(f) {
     let currentIdentity;
     const authContext = { exports: {}, console: { error() {} }, process: { env: { JWT_SECRET: 'isolated-test-secret' } }, require: name => {
         if (name === '../config/db') return { promise: () => ({ query: async (sql, params) => {
-            assert.equal(sql, 'SELECT user_id, role, branch_id, is_active FROM users WHERE user_id = ?');
+            assert.equal(sql, 'SELECT user_id, role, branch_id, is_active, account_state, auth_version FROM users WHERE user_id = ?');
             return [currentIdentity && Number(currentIdentity.user_id) === params[0] ? [currentIdentity] : []];
         } }) };
         return require(name);
@@ -152,8 +152,9 @@ function httpHarness(f) {
     } };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../routes/business.routes.js'), 'utf8'), routerContext);
     return async (method, routePath, user, overrides = {}) => {
-        currentIdentity = Object.hasOwn(overrides, 'currentIdentity') ? overrides.currentIdentity : user ? { ...user, is_active: 1 } : null;
-        const token = user ? require('jsonwebtoken').sign(user, 'isolated-test-secret', { expiresIn: '1h' }) : null;
+        const identity = Object.hasOwn(overrides, 'currentIdentity') ? overrides.currentIdentity : user ? { ...user, is_active: 1 } : null;
+        currentIdentity = identity ? { account_state: 'ACTIVE', auth_version: 0, ...identity } : null;
+        const token = user ? require('jsonwebtoken').sign({ auth_version: 0, ...user }, 'isolated-test-secret', { expiresIn: '1h' }) : null;
         const req = { headers: token ? { authorization: `Bearer ${token}` } : {}, params: { id: '1', branchId: '8' }, query: { date: '2026-09-19' }, body: body(), ...overrides };
         const router = routerContext.module.exports;
         const route = router.stack.find(l => l.route?.path === routePath && l.route.methods[method]);

@@ -74,7 +74,7 @@ async function authenticate(token, user = { user_id: 9, role: 'MANAGER', branch_
     const middleware = load('middleware/auth.middleware.js', { '../config/db': { promise: () => ({ query: async (sql, params) => {
         queries.push({ sql, params });
         if (fail) throw new Error('private database details');
-        return [user ? [user] : []];
+        return [user ? [{ account_state: 'ACTIVE', auth_version: 0, ...user }] : []];
     } }) } }, { JWT_SECRET: secret });
     const req = { headers: token === undefined ? {} : { authorization: `Bearer ${token}` } };
     let status = 200, body, next = false;
@@ -82,14 +82,14 @@ async function authenticate(token, user = { user_id: 9, role: 'MANAGER', branch_
     return { status, body, next, req, queries };
 }
 test('current database identity replaces signed role and branch and excludes sensitive columns', async () => {
-    const result = await authenticate(jwt.sign({ user_id: 9, role: 'HEAD_OFFICE', branch_id: 5, password: 'untrusted' }, secret));
+    const result = await authenticate(jwt.sign({ auth_version: 0, user_id: 9, role: 'HEAD_OFFICE', branch_id: 5, password: 'untrusted' }, secret));
     assert.equal(result.next, true);
     assert.deepEqual(JSON.parse(JSON.stringify(result.req.user)), { user_id: 9, role: 'MANAGER', branch_id: 8 });
-    assert.match(result.queries[0].sql, /^SELECT user_id, role, branch_id, is_active FROM users WHERE user_id = \?$/);
+    assert.match(result.queries[0].sql, /^SELECT user_id, role, branch_id, is_active, account_state, auth_version FROM users WHERE user_id = \?$/);
     assert.equal(result.queries[0].params[0], 9);
 });
-for (const [label, token] of [['malformed', 'not-a-jwt'], ['expired', jwt.sign({ user_id: 9 }, secret, { expiresIn: -1 })],
-    ['invalid signature', jwt.sign({ user_id: 9 }, 'other-synthetic-key')], ['wrong algorithm', jwt.sign({ user_id: 9 }, secret, { algorithm: 'HS384' })],
+for (const [label, token] of [['malformed', 'not-a-jwt'], ['expired', jwt.sign({ auth_version: 0, user_id: 9 }, secret, { expiresIn: -1 })],
+    ['invalid signature', jwt.sign({ auth_version: 0, user_id: 9 }, 'other-synthetic-key')], ['wrong algorithm', jwt.sign({ auth_version: 0, user_id: 9 }, secret, { algorithm: 'HS384' })],
     ['missing identity', jwt.sign({ role: 'HEAD_OFFICE' }, secret)], ['invalid identity', jwt.sign({ user_id: '1 OR 1=1' }, secret)]]) {
     test(`${label} token rejected before database lookup`, async () => {
         const result = await authenticate(token);
@@ -98,12 +98,12 @@ for (const [label, token] of [['malformed', 'not-a-jwt'], ['expired', jwt.sign({
 }
 for (const user of [null, { user_id: 9, role: 'MANAGER', is_active: 0 }, { user_id: 9, role: 'UNKNOWN', is_active: 1 }]) {
     test(`missing/disabled/invalid-role current identity is rejected (${user?.role || 'missing'}, ${user?.is_active})`, async () => {
-        const result = await authenticate(jwt.sign({ user_id: 9 }, secret), user);
+        const result = await authenticate(jwt.sign({ auth_version: 0, user_id: 9 }, secret), user);
         assert.equal(result.status, 401); assert.equal(result.next, false);
     });
 }
 test('identity database failure fails closed without leaking driver details', async () => {
-    const result = await authenticate(jwt.sign({ user_id: 9 }, secret), null, true);
+    const result = await authenticate(jwt.sign({ auth_version: 0, user_id: 9 }, secret), null, true);
     assert.equal(result.status, 503); assert.equal(result.next, false);
     assert.doesNotMatch(JSON.stringify(result.body), /private|database|SQL/);
 });
@@ -126,7 +126,7 @@ test('stale manager branch cannot read old branch; current branch and Head Offic
 function loginResponse(user, match = false, failure = false, input = { email: 'fixture@example.invalid', password: 'synthetic-input' }) {
     const comparisons = [], queries = [];
     const controller = load('controllers/auth.controller.js', {
-        '../config/db': { query(sql, params, callback) { queries.push({ sql, params }); callback(null, user ? [user] : []); } },
+        '../config/db': { query(sql, params, callback) { queries.push({ sql, params }); callback(null, user ? [{ account_state: 'ACTIVE', auth_version: 0, ...user }] : []); } },
         bcryptjs: { async compare(value, hash) { comparisons.push({ value, hash }); if (failure) throw new Error('private hash details'); return match; } }
     }, { JWT_SECRET: secret });
     return new Promise(resolve => {
@@ -163,11 +163,14 @@ test('malformed login input is rejected before SQL and comparison errors remain 
 // Only an ephemeral loopback server is used. No real DB, external service, sleeps,
 // or window-expiration assumptions; each limiter receives a fresh isolated store.
 async function application(t, limit = 30) {
-    const store = new MemoryStore();
-    t.after(() => store.shutdown());
+    const stores = [];
+    t.after(() => stores.forEach(store => store.shutdown()));
     const authRoutes = load('routes/auth.routes.js', {
         '../controllers/auth.controller': { login: (_req, res) => res.status(401).json({ message: 'Invalid credentials' }) },
-        '../middleware/login-limit.middleware': { createLoginLimiter: () => createLoginLimiter({ limit, store }) }
+        '../middleware/login-limit.middleware': { createLoginLimiter: () => {
+            const store = new MemoryStore(); stores.push(store);
+            return createLoginLimiter({ limit, store });
+        } }
     });
     const business = express.Router();
     business.post('/fixture', (_req, res) => res.json({ ok: true }));

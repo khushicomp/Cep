@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import "./Login.css";
+import "./CredentialRecovery.css";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -106,6 +107,7 @@ function Login() {
                   Sign In
                 </button>
               </form>
+              <p className="login-recovery-action"><Link className="login-recovery-link" to="/forgot-password">Forgot password?</Link></p>
             </div>
           </div>
         </div>

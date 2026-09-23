@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminDashboard from "./pages/AdminDashboard";
+import CredentialRecovery from "./pages/CredentialRecovery";
 
 
 function App() {
@@ -10,6 +11,9 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/forgot-password" element={<CredentialRecovery key="forgot" mode="forgot" />} />
+        <Route path="/setup-password" element={<CredentialRecovery key="setup" mode="setup" />} />
+        <Route path="/reset-password" element={<CredentialRecovery key="reset" mode="reset" />} />
 
 
         <Route

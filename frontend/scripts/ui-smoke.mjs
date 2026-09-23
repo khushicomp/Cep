@@ -29,6 +29,7 @@ let sequence = 0;
 let failManager = false;
 let failOverview = false;
 let failHistory = false;
+let credentialFailure = false;
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
 const item = { id: 1, srNo: 1, accountType: 'Savings Account (SB)', status: 'Opened', amount: '12345.67', remark: 'Synthetic browser fixture' };
 let manager = { id: 900, branch_id: 1, branch_name: 'Fixture Branch 01', entry_date: today, status: 'DRAFT', unlock_requested: 0, total_amount: '12345.67', entries: [{ ...item }] };
@@ -48,9 +49,16 @@ function overview(date) {
   summary.totalAmount = (summary.totalEntries * 12345.67).toFixed(2);
   return { date, summary, branches };
 }
-function api(url, method, body) {
+function api(url, method, body, headers = {}) {
   const route = url.pathname;
   calls.push({ route, method });
+  if (['/api/auth/forgot-password','/api/auth/setup-password','/api/auth/reset-password'].includes(route)) {
+    assert.ok(!Object.keys(headers).some(key => key.toLowerCase() === 'authorization'), 'Recovery requests must not attach bearer tokens');
+    if (route.endsWith('/forgot-password')) return [202, { message: 'If this account is eligible, password reset instructions will be emailed.' }];
+    assert.ok(typeof body.token === 'string' && body.token.length === 43, 'Credential sent only to completion endpoint');
+    assert.equal(body.password, body.confirmPassword);
+    return credentialFailure ? [400, { message: 'This link is invalid or expired. Request a new link.' }] : [200, { message: 'Password saved. Sign in with your new password.' }];
+  }
   if (route === '/api/auth/login') {
     if (body.password !== 'synthetic-browser-password') return [401, { message: 'Invalid credentials' }];
     const role = body.email === 'office@example.invalid' ? 'HEAD_OFFICE' : 'MANAGER';
@@ -141,7 +149,7 @@ try {
     try {
       const url = new URL(request.url);
       if (url.pathname.startsWith('/api/')) {
-        const [code, response] = api(url, request.method, request.postData ? JSON.parse(request.postData) : {});
+        const [code, response] = api(url, request.method, request.postData ? JSON.parse(request.postData) : {}, request.headers);
         await send('Fetch.fulfillRequest', { requestId, responseCode: code, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify(response)).toString('base64') });
       } else if (url.origin === origin) await send('Fetch.continueRequest', { requestId });
       else await send('Fetch.failRequest', { requestId, errorReason: 'BlockedByClient' });
@@ -164,6 +172,33 @@ try {
   await writeFile(path.join(artifacts, 'login-styles.json'), JSON.stringify(loginSnapshots));
   console.log('LOGIN comparison artifacts: ' + artifacts);
   if (!process.env.LOGIN_ONLY) {
+  // Synthetic recovery browser checks: existing session must never enter recovery HTTP requests.
+  await evaluate("localStorage.setItem('token','synthetic-stale-token')");
+  await evaluate("document.querySelector('.login-recovery-link').click()");
+  await wait("document.querySelector('#recovery-email')");
+  for (const width of [1440, 1024, 768, 390]) await screenshot('forgot-password', width);
+  await fill('#recovery-email', 'unknown@example.invalid'); await click('Request reset link');
+  await wait("document.querySelector('[role=status]')");
+  assert.ok(await evaluate("document.body.textContent.includes('If this account is eligible')"));
+  for (const mode of ['setup','reset']) {
+    await send('Page.navigate', { url: `${origin}/${mode}-password#token=${'a'.repeat(43)}` });
+    await wait("document.querySelector('#new-password')");
+    await wait("location.hash === ''");
+    assert.equal(await evaluate("Object.values(localStorage).some(value => value.includes('a'.repeat(43)))"), false);
+    for (const width of [1440, 1024, 768, 390]) await screenshot(`${mode}-password`, width);
+    await fill('#new-password', 'a synthetic browser passphrase'); await fill('#confirm-password', 'different'); await click('Save password');
+    await wait("document.querySelector('[role=alert]')");
+    await fill('#confirm-password', 'a synthetic browser passphrase');
+    credentialFailure = true; await click('Save password');
+    await wait("document.querySelector('[role=alert]')?.textContent.includes('invalid or expired')");
+    credentialFailure = false; await click('Save password'); await wait("document.querySelector('[role=status]')");
+    assert.equal(await evaluate("document.querySelector('#new-password')"), null);
+  }
+  await send('Page.navigate', { url: `${origin}/setup-password` });
+  await wait("document.querySelector('.credential-page [role=alert]')");
+  assert.ok(await evaluate("document.body.textContent.includes('authorized account operator')"));
+  await evaluate('localStorage.clear()');
+  console.log('PASS setup/reset/forgot UI, generic responses, confirmation, expired links and unauthenticated requests');
   await role('MANAGER');
   for (const width of [1440, 1024, 768, 390]) await screenshot('manager', width);
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
@@ -242,7 +277,7 @@ try {
   await click('Log out'); await wait("document.querySelector('#email')");
   assert.equal(await evaluate("localStorage.getItem('token')"), null);
   assert.deepEqual(runtimeErrors, []);
-  assert.ok(calls.every(call => call.route.startsWith('/api/business/') || call.route === '/api/auth/login'));
+  assert.ok(calls.every(call => call.route.startsWith('/api/business/') || ['/api/auth/login','/api/auth/forgot-password','/api/auth/setup-password','/api/auth/reset-password'].includes(call.route)));
   console.log('PASS Head Office 38 branches, search/status filters, correction decisions, final lock, audit text, analytics and logout');
   console.log('PASS no page overflow at 1440/1024/768/390px; no browser runtime exceptions');
   console.log('Screenshots (synthetic data only): ' + artifacts);

@@ -156,7 +156,7 @@ export default function AdminBusinessReports() {
         notFound ? <EmptyState title={detailError} /> : <InlineError onRetry={() => fetchBranchDetails(selectedBranch)}>{detailError}</InlineError> :
         branchDetails && <>
           <ReportState status={branchDetails.status} pending={pending} reason={branchDetails.unlock_reason} />
-          <dl className="report-context"><div><dt>Manager</dt><dd>{branchDetails.manager_name || 'Unavailable'}</dd></div><div><dt>Business date</dt><dd>{branchDetails.entry_date}</dd></div>
+          <dl className="report-context"><div><dt>Report creator (recorded)</dt><dd>{branchDetails.manager_name || 'Unavailable'}</dd></div><div><dt>Business date</dt><dd>{branchDetails.entry_date}</dd></div>
             <div><dt>Report</dt><dd>#{branchDetails.id}</dd></div></dl>
           {isHeadOffice && submitted && <section className="decision-panel" aria-label="Head Office report actions">
             <h2>{pending ? 'Correction decision required' : 'Ready for Head Office review'}</h2>

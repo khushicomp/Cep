@@ -9,11 +9,13 @@ exports.verifyToken = async (req, res, next) => {
   try {
     decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET, { algorithms: ['HS256'] });
     if (!decoded || !/^[1-9]\d*$/.test(String(decoded.user_id)) || !Number.isSafeInteger(Number(decoded.user_id)) || Number(decoded.user_id) > 2147483647) throw new Error();
+    if (!Number.isInteger(decoded.auth_version) || decoded.auth_version < 0 || decoded.auth_version > 4294967295) throw new Error();
   } catch { return res.status(401).json({ message: 'Unauthorized' }); }
   try {
-    const [rows] = await db.promise().query('SELECT user_id, role, branch_id, is_active FROM users WHERE user_id = ?', [Number(decoded.user_id)]);
+    const [rows] = await db.promise().query('SELECT user_id, role, branch_id, is_active, account_state, auth_version FROM users WHERE user_id = ?', [Number(decoded.user_id)]);
     const user = rows[0];
-    if (!user || Number(user.is_active) !== 1 || !['MANAGER', 'HEAD_OFFICE', 'ADMIN', 'EMPLOYEE'].includes(user.role)) {
+    if (!user || Number(user.is_active) !== 1 || user.account_state !== 'ACTIVE' || user.auth_version !== decoded.auth_version ||
+        !['MANAGER', 'HEAD_OFFICE', 'ADMIN', 'EMPLOYEE'].includes(user.role)) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
     // JWT role/branch claims are compatibility data only; never authorization input.

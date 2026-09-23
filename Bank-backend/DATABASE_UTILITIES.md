@@ -15,7 +15,9 @@ Normal startup uses `server.js` and `app.js`; only authentication and business r
 
 The three historical utilities fail before importing database/environment modules unless run directly with `--allow-historical-schema-write`. This gate is an accidental-execution barrier, not a production migration workflow. Their code remains dangerous: review it and use only a separately approved, disposable database if historical reconstruction is necessary. No utility was executed during Phase 5A.
 
-This repository does not yet provide a complete safe fresh-database bootstrap or account provisioning workflow. Do not substitute the old seed scripts or invent default credentials. Plan that work separately.
+This repository does not yet provide a complete safe fresh-database bootstrap. Phase 5D adds `scripts/phase5d-migration.js` (read-only by default) and `scripts/branch-account.js` (dry-run by default) for credential schema and controlled operational-account invitations. See `../PHASE5D_REVIEW.md` for review/apply prerequisites and the deferred Wani procedure. Do not substitute old seed scripts or invent default credentials. No utility runs during normal startup.
+
+Phase 5D authentication requires its reviewed schema migration before running the updated backend against an existing database. The migration is not automatically applied. Keep the committed Phase 5C runtime until that coordinated rollout; do not add a fail-open legacy-auth fallback. Invitation delivery requires explicit mailbox verification, apply/send flags, configured mail transport and an explicit recipient allowlist. Branch collisions require a separately reviewed incumbent-account disable, never silent replacement.
 
 Legacy `tasks` and `task_updates` tables, and any other historical tables recorded in schema metadata, remain untouched. Existing users (including EMPLOYEE/ADMIN), role definitions, branch records, report/item data, audit history, and permissions columns remain intact. Authentication still understands existing rows; the employee task workspace and its APIs have been removed.
 

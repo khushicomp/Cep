@@ -12,7 +12,7 @@ test('login keeps response shape and signs a ten-hour token without logging rows
         console: { log: (...args) => logs.push(args), error: (...args) => logs.push(args) },
         require: name => ({
             '../config/db': { query: (_sql, _params, callback) => callback(null, [{
-                user_id: 1, role: 'MANAGER', is_active: 1, password: 'test-hash', branch_id: 2
+                user_id: 1, role: 'MANAGER', is_active: 1, account_state: 'ACTIVE', auth_version: 0, password: 'test-hash', branch_id: 2
             }]) },
             bcryptjs: { compare: async () => true },
             jsonwebtoken: { sign: (payload, _secret, options) => { signed = { payload, options }; return 'test-token'; } }
