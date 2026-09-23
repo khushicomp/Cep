@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './DynamicEntryTable.css';
 import { showToast } from '../utils/toast';
 import api from '../services/api';
 import { businessToday } from '../utils/businessDate';
 import ReportAuditHistory from './ReportAuditHistory';
+import { useDialog } from '../utils/useDialog';
+import { formatBusinessAmount as amount } from '../utils/businessAmount';
+import { PageHeader, DateControls, ReportState, StatusBadge, LoadingState, InlineError, EmptyState } from './OperationsUI';
 
 const ACCOUNT_TYPE_OPTIONS = [
   // Group 1: DEPOSITS
@@ -52,9 +55,16 @@ const STATUS_OPTIONS = [
 ];
 
 function DynamicEntryTable() {
+  const ask = useDialog();
+  const [loadError, setLoadError] = useState('');
+  const [validation, setValidation] = useState([]);
+  const [historyError, setHistoryError] = useState('');
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const requestVersion = useRef({ version: 0 });
+  const historyVersion = useRef({ version: 0 });
   const [entries, setEntries] = useState([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
   const [date, setDate] = useState(businessToday());
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [entryId, setEntryId] = useState(null); // If editing existing
   const [reportStatus, setReportStatus] = useState('DRAFT');
   const [unlockRequested, setUnlockRequested] = useState(false);
@@ -64,17 +74,22 @@ function DynamicEntryTable() {
   const [viewHistory, setViewHistory] = useState(false);
   const [cameFromHistory, setCameFromHistory] = useState(false);
 
-  const isLocked = reportStatus !== 'DRAFT';
+  const isLocked = reportStatus !== 'DRAFT' || Boolean(loadError);
 
   useEffect(() => {
+    const requests = requestVersion.current;
+    const histories = historyVersion.current;
     fetchTodayEntry(date);
     fetchHistory();
+    return () => { requests.version++; histories.version++; };
   }, [date]);
 
   const fetchTodayEntry = async (queryDate) => {
+    const request = ++requestVersion.current.version;
     try {
-      setLoading(true);
+      setLoading(true); setLoadError(''); setValidation([]);
       const res = await api.get(`/business/my-entries?date=${queryDate}&t=${Date.now()}`);
+      if (request !== requestVersion.current.version) return;
       if (res.data && res.data.entries) {
         setEntryId(res.data.id);
         setReportStatus((res.data.status || '').toUpperCase());
@@ -96,24 +111,26 @@ function DynamicEntryTable() {
         setEntries([{ id: Date.now(), accountType: '', status: '', amount: '', remark: '' }]);
       }
     } catch {
-      console.error("Request failed");
+      if (request === requestVersion.current.version) setLoadError("Unable to load the report for this date. Refresh before editing.");
     } finally {
-      setLoading(false);
+      if (request === requestVersion.current.version) setLoading(false);
     }
   };
 
   const fetchHistory = async () => {
+    const request = ++historyVersion.current.version;
+    setHistoryLoading(true); setHistoryError('');
     try {
       const res = await api.get(`/business/history?t=${Date.now()}`);
-      setHistory(res.data || []);
+      if (request === historyVersion.current.version) setHistory(res.data || []);
     } catch {
-      console.error("Request failed");
-    }
+      if (request === historyVersion.current.version) setHistoryError('Unable to load report history.');
+    } finally { if (request === historyVersion.current.version) setHistoryLoading(false); }
   };
 
   const requestCorrection = async () => {
     if (localStorage.getItem('role') !== 'MANAGER' || loading || requestingCorrection || !entryId || reportStatus !== 'SUBMITTED' || unlockRequested) return;
-    const reason = window.prompt('Why does this report need correction? (1–1000 characters)');
+    const reason = await ask({ title: 'Request a correction', description: 'Report for ' + date + '. Explain what needs to change. Head Office must approve before editing can resume.', reason: true, reasonLabel: 'Requested reason', confirm: 'Send correction request' });
     if (reason === null) return;
     if (!reason.trim() || [...reason.trim()].length > 1000) {
       showToast('Enter a reason of 1 to 1000 characters', 'error');
@@ -148,7 +165,7 @@ function DynamicEntryTable() {
   const handleRemoveRow = async (id) => {
     if (isLocked || loading) return;
     if (entries.length === 1) {
-      if (!window.confirm("This is the last row. Deleting it will remove the entire entry. Continue?")) {
+      if (!await ask({ title: 'Remove the last row?', description: 'This will delete the entire saved draft report, if one exists. This cannot be undone.', confirm: 'Remove last row', danger: true })) {
         return;
       }
       if (entryId) {
@@ -159,7 +176,7 @@ function DynamicEntryTable() {
       return;
     }
 
-    if (!window.confirm("Are you sure you want to delete this row?")) {
+    if (!await ask({ title: 'Remove this row?', description: 'For a saved draft, the remaining rows will be saved immediately.', confirm: 'Remove row', danger: true })) {
       return;
     }
 
@@ -202,6 +219,7 @@ function DynamicEntryTable() {
 
   const handleSubmit = async (statusType) => {
     if (isLocked || loading) return;
+    setValidation([]);
     if (entries.length === 0) {
       showToast("At least one entry is required.", "error");
       return;
@@ -226,11 +244,12 @@ function DynamicEntryTable() {
       });
 
       if (!isValid) {
-        alert('Please fix the following errors:\n\n' + errorMessages.join('\n'));
+        setValidation(errorMessages);
         return;
       }
     }
 
+    if (statusType === 'submitted' && !await ask({ title: 'Submit report to Head Office?', description: 'Report for ' + date + '. Editing will be locked after submission. Further changes require an approved correction request.', confirm: 'Submit report' })) return;
     try {
       setLoading(true);
       const payload = {
@@ -250,7 +269,7 @@ function DynamicEntryTable() {
         // Update existing
         await api.put(`/business/entry/${entryId}`, payload);
         setReportStatus(statusType.toUpperCase());
-        alert(`Report ${statusType === 'submitted' ? 'Submitted' : 'Saved as Draft'} successfully!`);
+        showToast(`Report ${statusType === 'submitted' ? 'Submitted' : 'Saved as Draft'} successfully!`);
       } else {
         // Create new
         const res = await api.post("/business/daily-entry", payload);
@@ -270,7 +289,7 @@ function DynamicEntryTable() {
   const handleDeleteReport = async (skipConfirm = false) => {
     if (!entryId || isLocked || loading) return;
     const isSkip = skipConfirm === true;
-    if (!isSkip && !window.confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
+    if (!isSkip && !await ask({ title: 'Delete this draft report?', description: 'The report for ' + date + ' and its entries will be removed. This cannot be undone.', confirm: 'Delete draft report', danger: true })) {
       return;
     }
     
@@ -295,199 +314,66 @@ function DynamicEntryTable() {
     }
   };
 
-  if (viewHistory) {
-    return (
-      <div className="history-view">
-        <button className="back-btn" onClick={() => setViewHistory(false)}>← Back to Entry Form</button>
-        <h2>Recent Submissions</h2>
-        <table className="tasks-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Total Amount (₹)</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {history.length === 0 ? <tr><td colSpan="4" style={{textAlign:'center'}}>No history found</td></tr> :
-              history.map(h => (
-                <tr key={h.id}>
-                  <td>{h.entry_date}</td>
-                  <td>₹ {Number(h.total_amount).toLocaleString()}</td>
-                  <td><span className={`status-badge ${['SUBMITTED', 'FINAL_LOCKED'].includes(h.status) ? 'status-completed-mgr' : 'status-pending-mgr'}`}>{h.status.toUpperCase()}</span></td>
-                  <td>
-                    <button onClick={() => { 
-                      setDate(h.entry_date);
-                      setViewHistory(false); 
-                      setCameFromHistory(true); 
-                    }} className="action-link-btn">
-                      View/Edit
-                    </button>
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+  if (viewHistory) return <section>
+    <div className="entry-toolbar"><button onClick={() => setViewHistory(false)}>Back to daily report</button></div>
+    <PageHeader title="Report history" description="Open an existing report to review its entries and status." />
+    {historyLoading ? <LoadingState>Loading report history…</LoadingState> : historyError ? <InlineError onRetry={fetchHistory}>{historyError}</InlineError> :
+      history.length === 0 ? <EmptyState title="No reports have been started for this branch." /> :
+      <div className="ops-surface table-scroll" role="region" aria-label="Branch report history" tabIndex="0"><table className="data-table">
+        <thead><tr><th scope="col">Business date</th><th scope="col">Status</th><th scope="col" className="numeric">Amount (₹)</th><th scope="col">Report</th></tr></thead>
+        <tbody>{history.map(item => <tr key={item.id}><td>{item.entry_date}</td><td><StatusBadge status={item.status} /></td><td className="numeric">{amount(item.total_amount)}</td><td>
+          <button onClick={() => { setDate(item.entry_date); setViewHistory(false); setCameFromHistory(true); }}>Open report</button>
+        </td></tr>)}</tbody>
+      </table></div>}
+  </section>;
 
-  return (
-    <div className="dynamic-entry-container">
-      <div className="entry-header" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        {cameFromHistory && (
-           <button className="back-btn" onClick={() => { setViewHistory(true); setCameFromHistory(false); }} style={{ padding: '0.4rem 0.8rem', marginRight: '10px' }}>← Back to History</button>
-        )}
-        <h2 style={{ flex: 1, margin: 0 }}>Daily Business Entry</h2>
-        <div className="entry-controls">
-          <label>Date: </label>
-          <input type="date" value={date} disabled={loading || requestingCorrection} onChange={(e) => setDate(e.target.value)} max={businessToday()} />
-          <button className="history-btn" disabled={requestingCorrection} onClick={() => setViewHistory(true)}>View History</button>
-        </div>
-      </div>
-
-      <div className="table-wrapper">
-        <table className="entry-table">
-          <thead>
-            <tr>
-              <th width="5%">Sr</th>
-              <th width="35%">Account Type</th>
-              <th width="15%">Status</th>
-              <th width="15%">Amount (₹)</th>
-              <th width="20%">Remark</th>
-              <th width="10%">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry, index) => (
-              <tr key={entry.id}>
-                <td align="center">{index + 1}</td>
-                <td>
-                  <input 
-                    list="account-types" 
-                    value={entry.accountType} 
-                    onChange={(e) => handleChange(entry.id, 'accountType', e.target.value)} 
-                    placeholder="Search or Select..."
-                    className="form-input"
-                    disabled={isLocked || loading}
-                    required
-                  />
-                  <datalist id="account-types">
-                    {ACCOUNT_TYPE_OPTIONS.map((opt, i) => (
-                      <option key={i} value={opt.label}>{opt.group}</option>
-                    ))}
-                  </datalist>
-                </td>
-                <td>
-                  <select 
-                    value={entry.status} 
-                    onChange={(e) => handleChange(entry.id, 'status', e.target.value)}
-                    className="form-select"
-                    disabled={isLocked || loading}
-                    required
-                  >
-                    <option value="">Select...</option>
-                    {STATUS_OPTIONS.map((opt, i) => (
-                      <option key={i} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <input 
-                    type="number" 
-                    min="0"
-                    step="0.01"
-                    value={entry.amount} 
-                    onChange={(e) => handleChange(entry.id, 'amount', e.target.value)}
-                    className="form-input"
-                    disabled={isLocked || loading}
-                    placeholder="0.00"
-                  />
-                </td>
-                <td>
-                  <input 
-                    type="text" 
-                    value={entry.remark} 
-                    onChange={(e) => handleChange(entry.id, 'remark', e.target.value)}
-                    className="form-input"
-                    disabled={isLocked || loading}
-                    placeholder="Optional"
-                  />
-                </td>
-                <td align="center">
-                  {!isLocked && (
-                    <button type="button" onClick={() => handleRemoveRow(entry.id)} className="icon-btn-delete" title="Remove Row">
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                      </svg>
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="entry-footer">
-        {!isLocked && (
-          <button type="button" onClick={handleAddRow} className="add-row-btn">
-            + Add Row
-          </button>
-        )}
-        <div className="total-calculation" style={{ marginLeft: isLocked ? 'auto' : '0' }}>
-          <strong>Total Amount: </strong> 
-          <span className="total-val">₹ {totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
-        </div>
-      </div>
-
-      <div className="entry-actions">
-        {reportStatus === 'SUBMITTED' && (unlockRequested ? (
-          <p role="status">Correction approval pending. Reason: {unlockReason}</p>
-        ) : localStorage.getItem('role') === 'MANAGER' && (
-          <button className="draft-btn" disabled={loading || requestingCorrection} onClick={requestCorrection}>
-            {requestingCorrection ? 'Requesting...' : 'Request Correction'}
-          </button>
-        ))}
-        {isLocked ? (
-          <div className="locked-notice" style={{ color: '#EF4444', fontWeight: 'bold', padding: '10px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🔒</span> This report is {reportStatus} and cannot be edited.
-          </div>
-        ) : (
-          <>
-            {entryId && (
-              <button 
-                 onClick={() => handleDeleteReport(false)} 
-                 disabled={loading} 
-                 className="draft-btn" 
-                 style={{ backgroundColor: '#EF4444', color: 'white', borderColor: '#DC2626', marginRight: 'auto' }}
-              >
-                {loading ? 'Deleting...' : 'Delete Report'}
-              </button>
-            )}
-            <button 
-              onClick={() => handleSubmit('draft')} 
-              disabled={loading} 
-              className="draft-btn"
-            >
-              {loading ? 'Saving...' : 'Save as Draft'}
-            </button>
-            <button 
-              onClick={() => handleSubmit('submitted')} 
-              disabled={loading} 
-              className="submit-report-btn"
-            >
-              {loading ? 'Submitting...' : 'Submit Final Report'}
-            </button>
-          </>
-        )}
-      </div>
-      {entryId && !loading && localStorage.getItem('role') === 'MANAGER' &&
-        <ReportAuditHistory key={entryId} entryId={entryId} revision={`${reportStatus}:${unlockRequested}`} />}
+  return <section className="daily-entry">
+    <PageHeader title="Daily business report" description="Enter the branch’s consolidated business for the selected date.">
+      <DateControls date={date} onChange={setDate} disabled={loading || requestingCorrection} max={businessToday()} onRefresh={() => fetchTodayEntry(date)} />
+    </PageHeader>
+    <div className="entry-toolbar">{cameFromHistory ? <button disabled={loading} onClick={() => { setViewHistory(true); setCameFromHistory(false); }}>Back to report history</button> : <span className="muted">Business date: <strong>{date}</strong></span>}
+      <button disabled={loading || requestingCorrection} onClick={() => setViewHistory(true)}>Report history</button>
     </div>
-  );
+    {loadError && <InlineError onRetry={() => fetchTodayEntry(date)}>{loadError}</InlineError>}
+    {loading ? <LoadingState>Loading or saving your report…</LoadingState> : !loadError && <>
+      <ReportState status={entryId ? reportStatus : 'NOT_STARTED'} pending={unlockRequested} reason={unlockReason} />
+      {!entryId && <p className="entry-help">Start with an entry below. Save a draft to continue later, or submit once the report is complete.</p>}
+      {validation.length > 0 && <InlineError><strong>Check these entries before submitting:</strong><ul>{validation.map(message => <li key={message}>{message}</li>)}</ul></InlineError>}
+      <div className="ops-surface">
+        <div className="section-heading"><h2>{isLocked ? 'Reported entries' : 'Report entries'}</h2><span className="muted">{entries.length} {entries.length === 1 ? 'row' : 'rows'}</span></div>
+        <div className="table-scroll" role="region" aria-label="Daily report entries" tabIndex="0">
+          <table className="entry-table">
+            <thead><tr><th scope="col" className="row-number">No.</th><th scope="col" className="account-column">Account type</th><th scope="col" className="status-column">Activity</th><th scope="col" className="amount-column numeric">Amount (₹)</th><th scope="col">Remark</th>{!isLocked && <th scope="col" className="remove-column"><span className="sr-only">Remove row</span></th>}</tr></thead>
+            <tbody>{entries.map((entry, index) => <tr key={entry.id}>
+              <td>{index + 1}</td>
+              {isLocked ? <><td>{entry.accountType || '—'}</td><td>{entry.status || '—'}</td><td className="numeric">{amount(entry.amount || '0')}</td><td>{entry.remark || '—'}</td></> : <>
+                <td><input list="account-types" value={entry.accountType} onChange={event => handleChange(entry.id, 'accountType', event.target.value)} placeholder="Search or select account type" aria-label={`Row ${index + 1} account type`} required /></td>
+                <td><select value={entry.status} onChange={event => handleChange(entry.id, 'status', event.target.value)} aria-label={`Row ${index + 1} activity`} required><option value="">Select activity</option>{STATUS_OPTIONS.map(option => <option key={option}>{option}</option>)}</select></td>
+                <td><input type="number" min="0" step="0.01" value={entry.amount} onChange={event => handleChange(entry.id, 'amount', event.target.value)} placeholder="0.00" aria-label={`Row ${index + 1} amount in rupees`} /></td>
+                <td><input value={entry.remark} onChange={event => handleChange(entry.id, 'remark', event.target.value)} placeholder="Optional" aria-label={`Row ${index + 1} remark`} /></td>
+                <td><button className="remove-row" disabled={loading} onClick={() => handleRemoveRow(entry.id)} aria-label={`Remove row ${index + 1}`}>Remove</button></td>
+              </>}
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <datalist id="account-types">{ACCOUNT_TYPE_OPTIONS.map(option => <option key={option.label} value={option.label}>{option.group}</option>)}</datalist>
+        <div className="entry-total">{!isLocked && <button disabled={loading} onClick={handleAddRow}>+ Add row</button>}
+          <div><span>Total entered amount</span><strong>₹ {totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+        </div>
+      </div>
+      <div className="entry-actions">
+        {reportStatus === 'SUBMITTED' && !unlockRequested && localStorage.getItem('role') === 'MANAGER' &&
+          <button disabled={requestingCorrection} onClick={requestCorrection}>{requestingCorrection ? 'Sending request…' : 'Request correction'}</button>}
+        {!isLocked && <>
+          {entryId && <button className="danger-button delete-report" disabled={loading} onClick={() => handleDeleteReport(false)}>Delete draft</button>}
+          <button disabled={loading} onClick={() => handleSubmit('draft')}>Save draft</button>
+          <button className="primary-button" disabled={loading} onClick={() => handleSubmit('submitted')}>Submit report</button>
+          <p>Save keeps the report editable. Submit sends it to Head Office and locks editing.</p>
+        </>}
+      </div>
+      {entryId && localStorage.getItem('role') === 'MANAGER' && <ReportAuditHistory key={entryId} entryId={entryId} revision={`${reportStatus}:${unlockRequested}`} />}
+    </>}
+  </section>;
 }
 
 export default DynamicEntryTable;

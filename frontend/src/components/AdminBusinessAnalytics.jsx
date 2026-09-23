@@ -1,79 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../services/api';
-import './AdminBusinessReports.css';
+import { formatBusinessAmount as amount } from '../utils/businessAmount';
+import { PageHeader, SummaryMetric, LoadingState, InlineError, EmptyState } from './OperationsUI';
 
-function AdminBusinessAnalytics() {
+export default function AdminBusinessAnalytics() {
   const [reportData, setReportData] = useState(null);
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
-    fetchReports();
-  }, []);
-
-  const fetchReports = async () => {
-    try {
-      const res = await api.get('/business/reports');
-      setReportData(res.data);
-    } catch {
-      console.error("Request failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) return <p>Loading Analytics...</p>;
-  if (!reportData) return <p>Failed to load analytics.</p>;
-
-  return (
-    <div className="admin-reports-container">
-      <div className="reports-header-flex">
-        <h2>OVERALL STATISTICS (All Time)</h2>
+    let current = true;
+    api.get('/business/reports').then(res => { if (current) { setReportData(res.data); setError(false); } })
+      .catch(() => { if (current) setError(true); })
+      .finally(() => { if (current) setLoading(false); });
+    return () => { current = false; };
+  }, [revision]);
+  const refresh = () => { setLoading(true); setError(false); setRevision(value => value + 1); };
+  return <section>
+    <PageHeader title="Business analytics" description="All-time reported business across branches. This view is not limited to the daily operations date.">
+      <button disabled={loading} onClick={refresh}>Refresh analytics</button>
+    </PageHeader>
+    {loading && <LoadingState>Loading business analytics…</LoadingState>}
+    {error && <InlineError onRetry={refresh}>Unable to load business analytics.</InlineError>}
+    {reportData && !loading && !error && <>
+      <div className="summary-strip analytics-summary">
+        <SummaryMetric label="Total business" value={'₹ ' + amount(reportData.overall.totalBusiness || '0')}>Across all existing reports</SummaryMetric>
+        <SummaryMetric label="Accounts / items" value={reportData.overall.totalAccountsOpened || 0}>Total reported items</SummaryMetric>
       </div>
-
-      <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ flex: 1, padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ margin: 0, color: '#64748b', fontSize: '0.9rem', textTransform: 'uppercase' }}>Total Business</h3>
-          <p style={{ margin: '10px 0 0', fontSize: '1.8rem', fontWeight: 'bold', color: '#10b981' }}>
-            ₹ {Number(reportData.overall.totalBusiness || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-          </p>
-        </div>
-        
-        <div style={{ flex: 1, padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ margin: 0, color: '#64748b', fontSize: '0.9rem', textTransform: 'uppercase' }}>Total Accounts / Items processed</h3>
-          <p style={{ margin: '10px 0 0', fontSize: '1.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
-            {reportData.overall.totalAccountsOpened || 0}
-          </p>
-        </div>
+      <div className="ops-surface">
+        <div className="section-heading"><div><h2>Account type breakdown</h2><p>Top 10 by item count · all time</p></div></div>
+        {reportData.breakdown?.length ? <div className="table-scroll" role="region" aria-label="Account type breakdown" tabIndex="0"><table className="data-table">
+          <thead><tr><th scope="col">Account type</th><th scope="col" className="numeric">Items</th><th scope="col" className="numeric">Amount (₹)</th></tr></thead>
+          <tbody>{reportData.breakdown.map((item, index) => <tr key={index}><td><strong>{item.account_type}</strong></td><td className="numeric">{item.count}</td><td className="numeric">{amount(item.amount || '0')}</td></tr>)}</tbody>
+        </table></div> : <EmptyState title="No account breakdown is available yet." />}
       </div>
-
-      <div className="details-header">
-        <h2>Account Type Breakdown (Top 10)</h2>
-      </div>
-
-      <table className="admin-data-table">
-        <thead>
-          <tr>
-            <th>Account Type</th>
-            <th>Count</th>
-            <th>Total Amount (₹)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reportData.breakdown && reportData.breakdown.length > 0 ? (
-            reportData.breakdown.map((item, idx) => (
-              <tr key={idx}>
-                <td><strong>{item.account_type}</strong></td>
-                <td>{item.count}</td>
-                <td>{Number(item.amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-              </tr>
-            ))
-          ) : (
-            <tr><td colSpan="3" align="center">No data available</td></tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+    </>}
+  </section>;
 }
-
-export default AdminBusinessAnalytics;

@@ -1,0 +1,168 @@
+/* Tokens and base rules apply only to authenticated UI (dialogs/toasts included). */
+:where(.workspace-shell, .workflow-dialog, .toast) {
+  --brand: #b94313;
+  --brand-hover: #92330d;
+  --brand-tint: #fff1e9;
+  --brand-border: #edba9f;
+  --focus: #b94313;
+  --page: #f5f6f7;
+  --surface: #ffffff;
+  --surface-secondary: #f8f9fa;
+  --border: #dce0e4;
+  --border-strong: #9ca5ae;
+  --text: #222a32;
+  --secondary: #505d69;
+  --muted: #626d77;
+  --success: #246244;
+  --success-bg: #edf7f0;
+  --warning: #78560c;
+  --warning-bg: #fff8e5;
+  --danger: #a02a2a;
+  --danger-bg: #fff1f0;
+  --info: #285c71;
+  --info-bg: #edf5f8;
+  --neutral-bg: #f0f2f4;
+  --radius: 6px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --type-small: .8125rem;
+  --type-body: .875rem;
+  --type-section: 1.0625rem;
+  --type-title: 1.5rem;
+  --orange-primary: var(--brand);
+  --orange-dark: var(--brand-hover);
+  --gray-700: var(--secondary);
+}
+:where(.workspace-shell, .workflow-dialog, .toast), :where(.workspace-shell, .workflow-dialog, .toast) * { box-sizing: border-box; }
+:where(.workspace-shell, .workflow-dialog, .toast) { margin: 0; background: var(--page); color: var(--text); font: var(--type-body)/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+:where(.workspace-shell, .workflow-dialog, .toast) h1, :where(.workspace-shell, .workflow-dialog, .toast) h2, :where(.workspace-shell, .workflow-dialog, .toast) h3, :where(.workspace-shell, .workflow-dialog, .toast) p { margin: 0; }
+:where(.workspace-shell, .workflow-dialog, .toast) h1 { font-size: var(--type-title); line-height: 1.3; font-weight: 650; letter-spacing: -.025em; }
+:where(.workspace-shell, .workflow-dialog, .toast) h2 { font-size: var(--type-section); font-weight: 650; }
+:where(.workspace-shell, .workflow-dialog, .toast) h3 { font-size: 1rem; }
+:where(.workspace-shell, .workflow-dialog, .toast) button, :where(.workspace-shell, .workflow-dialog, .toast) input, :where(.workspace-shell, .workflow-dialog, .toast) select, :where(.workspace-shell, .workflow-dialog, .toast) textarea { font: inherit; }
+:where(.workspace-shell, .workflow-dialog, .toast) button { cursor: pointer; }
+:where(.workspace-shell, .workflow-dialog, .toast) button:disabled { cursor: not-allowed; opacity: .5; }
+:where(.workspace-shell, .workflow-dialog, .toast) :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+:where(.workspace-shell, .workflow-dialog, .toast) input, :where(.workspace-shell, .workflow-dialog, .toast) select, :where(.workspace-shell, .workflow-dialog, .toast) textarea { color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 8px 10px; min-width: 0; }
+:where(.workspace-shell, .workflow-dialog, .toast) input:focus, :where(.workspace-shell, .workflow-dialog, .toast) select:focus, :where(.workspace-shell, .workflow-dialog, .toast) textarea:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--focus); }
+:where(.workspace-shell, .workflow-dialog, .toast) textarea { resize: vertical; }
+:where(.workspace-shell, .workflow-dialog, .toast) ::placeholder { color: var(--muted); opacity: 1; }
+
+/* Shared shell and primitives. Component styles own only their local layout. */
+.workspace-shell { min-height: 100vh; }
+.workspace-topbar { min-height: 80px; border-top: 4px solid var(--brand); border-bottom: 1px solid var(--border); background: var(--surface); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.bank-identity, .session-context { display: flex; align-items: center; gap: 14px; }
+.bank-identity img { width: 42px; height: 42px; object-fit: contain; }
+.bank-identity strong, .session-context strong { display: block; font-weight: 650; }
+.bank-identity span, .session-context span { display: block; font-size: var(--type-small); color: var(--muted); }
+.session-context { text-align: right; }
+.workspace-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: calc(100vh - 80px); }
+.workspace-sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 28px 14px; }
+.workspace-caption { padding: 0 12px 24px; overflow-wrap: anywhere; }
+.workspace-caption strong { display: block; font-size: 1rem; margin-top: 4px; }
+.workspace-caption p { color: var(--secondary); margin-top: 8px; font-size: var(--type-small); }
+.workspace-sidebar nav { display: grid; gap: 6px; }
+.workspace-sidebar nav button { text-align: left; border: 0; background: transparent; padding: 11px 12px; color: var(--secondary); border-left: 3px solid transparent; border-radius: 0 var(--radius) var(--radius) 0; }
+.workspace-sidebar nav button[aria-current] { background: var(--brand-tint); border-left-color: var(--brand); color: var(--brand-hover); font-weight: 650; }
+.workspace-note { margin-top: auto; padding: 40px 12px 0; color: var(--muted); font-size: .75rem; line-height: 1.8; }
+.workspace-main { padding: 28px 32px 0; min-width: 0; max-width: 1700px; width: 100%; }
+.workspace-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 22px 0; margin-top: 36px; border-top: 1px solid var(--border); font-size: .75rem; color: var(--muted); }
+.branch-context { display: flex; gap: 12px; align-items: baseline; margin-bottom: 14px; flex-wrap: wrap; }
+.eyebrow { color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-size: .6875rem; font-weight: 650; }
+.ops-page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin-bottom: 24px; }
+.ops-page-header p { margin-top: 6px; color: var(--secondary); max-width: 60ch; }
+.workspace-shell button, .workflow-dialog button { border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 8px 13px; border-radius: var(--radius); font-weight: 550; min-height: 36px; }
+.workspace-shell button:hover:not(:disabled), .workflow-dialog button:hover { background: var(--surface-secondary); border-color: var(--border-strong); }
+.workspace-shell .primary-button, .workspace-shell .submit-report-btn, .workflow-dialog .primary-button { background: var(--brand); color: white; border-color: var(--brand); }
+.workspace-shell .primary-button:hover:not(:disabled), .workspace-shell .submit-report-btn:hover:not(:disabled), .workflow-dialog .primary-button:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+.workspace-shell .danger-button, .workflow-dialog .danger-button { color: var(--danger); border-color: #d9a7a2; background: var(--surface); }
+.workspace-shell .danger-button:hover:not(:disabled), .workflow-dialog .danger-button:hover { background: var(--danger-bg); }
+.workspace-shell .text-button { background: transparent; border-color: transparent; color: var(--brand); padding-left: 0; }
+.date-controls { display: flex; align-items: flex-end; gap: 6px; flex-wrap: wrap; }
+.date-controls label { display: grid; gap: 4px; }
+.date-controls label span { font-size: .6875rem; color: var(--muted); }
+.date-controls input { min-height: 36px; padding: 6px 8px; }
+.ops-surface { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.section-heading p, .muted { color: var(--muted); font-size: var(--type-small); }
+.report-status { display: inline-block; white-space: nowrap; border-radius: 4px; padding: 3px 8px; font-size: .75rem; font-weight: 650; background: var(--neutral-bg); color: var(--secondary); }
+.state-not_started, .state-draft { color: var(--secondary); background: var(--neutral-bg); }
+.state-submitted { color: var(--info); background: var(--info-bg); }
+.state-correction_pending { color: var(--warning); background: var(--warning-bg); }
+.state-final_locked { color: var(--success); background: var(--success-bg); }
+.state-unknown { color: var(--danger); background: var(--danger-bg); }
+.report-state { padding: 16px 20px; border-left: 3px solid currentColor; margin-bottom: 20px; }
+.report-state > div { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.report-state p { margin-top: 6px; font-size: var(--type-small); }
+.reason-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.summary-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+.summary-metric { padding: 20px; min-width: 0; }
+.summary-metric + .summary-metric { border-left: 1px solid var(--border); }
+.metric-label { display: block; color: var(--secondary); font-size: var(--type-small); margin-bottom: 10px; }
+.metric-value { display: block; font-size: 1.625rem; letter-spacing: -.03em; line-height: 1.25; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.metric-detail { font-size: .75rem; color: var(--muted); margin-top: 10px; }
+.metric-detail progress { display: block; margin-top: 10px; width: 100%; height: 5px; accent-color: var(--brand); border: 0; background: var(--neutral-bg); }
+.workspace-shell progress::-webkit-progress-bar { background: var(--neutral-bg); }
+.workspace-shell progress::-webkit-progress-value { background: var(--brand); }
+.workspace-shell progress::-moz-progress-bar { background: var(--brand); }
+.table-scroll { position: relative; overflow: auto; max-width: 100%; }
+.workspace-shell table { width: 100%; border-collapse: collapse; background: var(--surface); font-size: var(--type-body); }
+.workspace-shell th { background: var(--surface-secondary); text-align: left; color: var(--secondary); font-size: .75rem; font-weight: 650; padding: 12px 16px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.workspace-shell td { padding: 13px 16px; border-bottom: 1px solid #edf0f2; vertical-align: middle; overflow-wrap: anywhere; }
+.workspace-shell tbody tr:hover { background: #fcfaf8; }
+.workspace-shell tbody tr:last-child td { border-bottom: 0; }
+.workspace-shell .numeric, .workspace-shell .amount-cell { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.workspace-shell .data-table { min-width: 640px; }
+.table-scroll:focus-visible { outline-offset: -3px; }
+.ops-loading, .ops-empty { padding: 36px 24px; color: var(--secondary); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.ops-loading { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 120px; }
+.loading-mark { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--brand); border-radius: 50%; }
+.ops-empty { text-align: center; }
+.ops-empty p { margin-top: 8px; }
+.ops-error { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 18px; border: 1px solid #d9a7a2; background: var(--danger-bg); color: var(--danger); border-radius: var(--radius); margin-bottom: 16px; }
+.ops-error ul { margin: 4px 0; padding-left: 20px; }
+.workflow-dialog { background: var(--surface); margin: auto; border: 1px solid var(--border); border-radius: 8px; padding: 28px; width: min(520px, calc(100% - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; color: var(--text); box-shadow: 0 16px 60px #17212d30; }
+.workflow-dialog::backdrop { background: #18222d80; }
+.workflow-dialog h2 { margin: 8px 0 12px; font-size: 1.25rem; }
+.workflow-dialog p { color: var(--secondary); }
+.reason-field { display: grid; gap: 8px; margin-top: 20px; font-weight: 600; }
+.reason-field textarea { width: 100%; font-weight: 400; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.workflow-dialog .field-error { color: var(--danger); margin-top: 8px; }
+.skip-link { position: fixed; left: 16px; top: -100px; z-index: 20; background: white; color: var(--brand); padding: 12px; }
+.skip-link:focus { top: 12px; }
+.toast { position: fixed; right: 24px; top: 24px; z-index: 10000; display: flex; align-items: center; max-width: min(460px, calc(100vw - 32px)); padding: 14px 18px; border-radius: var(--radius); background: var(--success); color: white; box-shadow: 0 4px 20px #17212d20; transform: translateX(calc(100% + 30px)); transition: transform .15s; overflow-wrap: anywhere; }
+.toast.show { transform: translateX(0); }
+.toast-error { background: var(--danger); }
+@media (max-width: 1200px) {
+  .workspace-layout { grid-template-columns: 176px minmax(0, 1fr); }
+  .workspace-main { padding: 24px 20px 0; }
+  .summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary-metric:nth-child(3) { border-left: 0; }
+  .summary-metric:nth-child(n+3) { border-top: 1px solid var(--border); }
+}
+@media (max-width: 800px) {
+  .workspace-layout { display: block; }
+  .workspace-sidebar { padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .workspace-caption, .workspace-note { display: none; }
+  .workspace-sidebar nav { display: flex; flex-wrap: wrap; }
+  .workspace-sidebar nav button { border-left: 0; border-bottom: 2px solid transparent; }
+  .workspace-sidebar nav button[aria-current] { border-bottom-color: var(--brand); }
+  .workspace-topbar { padding: 12px 16px; }
+  .bank-identity strong { max-width: 30ch; font-size: .8125rem; }
+  .bank-identity span { font-size: .6875rem; }
+}
+@media (max-width: 520px) {
+  .workspace-topbar { align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .session-context { width: 100%; justify-content: space-between; text-align: left; }
+  .workspace-main { padding: 20px 12px 0; }
+  .summary-metric { padding: 14px; }
+  .metric-value { font-size: 1.25rem; }
+  .ops-page-header { gap: 14px; }
+  .workspace-footer span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { :where(.workspace-shell, .workflow-dialog, .toast), :where(.workspace-shell, .workflow-dialog, .toast) *, :where(.workspace-shell, .workflow-dialog, .toast) *::before, :where(.workspace-shell, .workflow-dialog, .toast) *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

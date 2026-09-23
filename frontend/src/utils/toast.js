@@ -1,6 +1,7 @@
 export function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
+    toast.role = type === 'error' ? 'alert' : 'status';
     const icon = document.createElement('span');
     icon.style.fontSize = '1.25rem';
     icon.style.marginRight = '0.75rem';

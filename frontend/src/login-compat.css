@@ -1,0 +1,4 @@
+/* Preserve the Phase 5B login heading rule formerly supplied by dashboard CSS. */
+@media (max-width: 768px) {
+  .login-container h1 { font-size: 1.75rem !important; }
+}
