@@ -8,7 +8,9 @@ function createMailService(env = process.env, transportOverride) {
     let transport = transportOverride;
     let origin;
     if (mode !== 'disabled' || transport) {
-        const url = new URL(env.CREDENTIAL_APP_ORIGIN);
+        let url;
+        try { url = new URL(env.CREDENTIAL_APP_ORIGIN); }
+        catch { throw new Error('Invalid credential application origin'); }
         if (url.origin !== env.CREDENTIAL_APP_ORIGIN || url.username || url.password ||
             (url.protocol !== 'https:' && !(env.NODE_ENV === 'test' && url.hostname === 'localhost'))) throw new Error('Invalid credential application origin');
         origin = url.origin;
@@ -28,6 +30,8 @@ function createMailService(env = process.env, transportOverride) {
             await response.body?.cancel();
             if (!response.ok) throw new Error('Mail delivery failed');
         } };
+    } else if (!transport && mode === 'resend') {
+        transport = require('./resend-mail.transport').createResendTransport(env);
     } else if (!transport && mode !== 'disabled') throw new Error('Unsupported mail transport');
     return {
         configured: Boolean(transport),

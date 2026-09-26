@@ -4,6 +4,10 @@ const helmet = require("helmet");
 require("dotenv").config();
 const { validateEnvironment, corsOptions } = require('./config/security');
 const security = validateEnvironment();
+// Validate Resend configuration before mounting routes; construction never sends mail.
+if (process.env.CREDENTIAL_MAIL_TRANSPORT === 'resend') {
+    require('./services/credential-mail.service').createMailService();
+}
 
 const app = express();
 app.set('trust proxy', security.trustProxy);

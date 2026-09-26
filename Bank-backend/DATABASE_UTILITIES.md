@@ -19,6 +19,8 @@ This repository does not yet provide a complete safe fresh-database bootstrap. P
 
 Phase 5D authentication requires its reviewed schema migration before running the updated backend against an existing database. The migration is not automatically applied. Keep the committed Phase 5C runtime until that coordinated rollout; do not add a fail-open legacy-auth fallback. Invitation delivery requires explicit mailbox verification, apply/send flags, configured mail transport and an explicit recipient allowlist. Branch collisions require a separately reviewed incumbent-account disable, never silent replacement.
 
+Phase 5E adds the optional Resend transport without changing provisioning or token lifecycle. See [Phase 5E configuration and review](../PHASE5E_REVIEW.md) for environment-only credentials, verified-sender prerequisites and mandatory recipient allowlisting. Mail remains disabled by default; real delivery, bank DNS changes and the Wani pilot require separate authorization.
+
 Legacy `tasks` and `task_updates` tables, and any other historical tables recorded in schema metadata, remain untouched. Existing users (including EMPLOYEE/ADMIN), role definitions, branch records, report/item data, audit history, and permissions columns remain intact. Authentication still understands existing rows; the employee task workspace and its APIs have been removed.
 
 Run isolated tests with `node --test --test-isolation=none scripts/*.test.js` from this directory. They use synthetic credentials and in-memory fixtures; they must never run seeds or mutate live business data. Keep local `.env` and database backups out of Git.
