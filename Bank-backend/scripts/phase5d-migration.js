@@ -145,8 +145,7 @@ async function main() {
     require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
     let c;
     try {
-        c = await require('mysql2/promise').createConnection({ host: process.env.DB_HOST, user: process.env.DB_USER, password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME, port: Number(process.env.DB_PORT || 3306), multipleStatements: false, dateStrings: true });
+        c = await require('../config/database-options').openConnection();
         if (!applying) await c.query('START TRANSACTION READ ONLY');
         else {
             const [rows] = await c.query("SELECT GET_LOCK('bank_phase5d_migration', 0) AS acquired");

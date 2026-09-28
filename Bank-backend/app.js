@@ -19,6 +19,7 @@ app.use(helmet({ referrerPolicy: { policy: 'no-referrer' },
 
 app.use(cors(corsOptions(security.origins)));
 app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+require('./services/runtime-health').installHealth(app, require('./config/db').promise());
 
 
 

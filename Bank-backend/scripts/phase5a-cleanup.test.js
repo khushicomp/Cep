@@ -14,6 +14,8 @@ test('application mounts only auth/business APIs, with all report operations pre
         if (name === './config/security') return { validateEnvironment: () => ({ production: false, origins: ['http://localhost:5173'], trustProxy: false }), corsOptions: () => ({}) };
         if (name === 'cors' || name === 'helmet') return () => () => {};
         if (name === './middleware/error.middleware') return { errorHandler() {} };
+        if (name === './services/runtime-health') return require('../services/runtime-health');
+        if (name === './config/db') return { promise: () => ({}) };
         assert.ok(['./routes/auth.routes', './routes/business.routes'].includes(name), `Unexpected runtime module ${name}`);
         return {};
     } };

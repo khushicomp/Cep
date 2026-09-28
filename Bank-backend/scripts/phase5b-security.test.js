@@ -59,6 +59,7 @@ test('frontend logout clears session and API 401 clears session and redirects to
     assert.equal(storage.size, 0);
     storage.set('token', 'synthetic-token'); storage.set('role', 'MANAGER'); storage.set('user', '{}');
     let onFailure, onRequest;
+    context.apiBaseUrl = 'https://api.example.invalid/api';
     context.axios = { create: () => ({ interceptors: { request: { use(fn) { onRequest = fn; } },
         response: { use(_success, failure) { onFailure = failure; } } } }) };
     const api = fs.readFileSync(path.join(__dirname, '../../frontend/src/services/api.js'), 'utf8')
@@ -176,6 +177,8 @@ async function application(t, limit = 30) {
     business.post('/fixture', (_req, res) => res.json({ ok: true }));
     business.get('/failure', (_req, _res, next) => next(new Error('private SQL password token')));
     const app = load('app.js', { dotenv: { config() {} }, './config/security': { validateEnvironment: () => validateEnvironment(production), corsOptions },
+        './services/runtime-health': require('../services/runtime-health'),
+        './config/db': { promise: () => ({ getConnection: async () => { throw new Error('Synthetic unavailable database'); } }) },
         './routes/auth.routes': authRoutes, './routes/business.routes': business,
         './middleware/error.middleware': load('middleware/error.middleware.js') });
     const server = app.listen(0, '127.0.0.1');

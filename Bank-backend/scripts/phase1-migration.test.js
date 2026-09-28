@@ -114,10 +114,9 @@ test('explicit apply stops all DDL when any pre-flight finding is blocked', asyn
     const context = {
         process: { argv: ['node', 'phase1-migration.js', '--apply'], env: {} },
         path, __dirname, console: { log() {} }, PreparationError: Error,
-        require: () => ({ config() {} }),
-        mysql: { createConnection: async () => ({
+        require: () => ({ config() {}, openConnection: async () => ({
             query: async () => { queries++; }, end: async () => { closed = true; }
-        }) },
+        }) }),
         prepare: async () => ({ blocked: ['Orphaned references'], steps: [{ description: 'Must not execute', sql: 'ALTER TABLE example ADD COLUMN example INT' }] })
     };
     vm.runInNewContext(main, context);

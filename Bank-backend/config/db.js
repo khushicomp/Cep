@@ -1,12 +1,9 @@
 const mysql = require("mysql2");
+const { databaseOptions, initializePool } = require('./database-options');
 
 // Callback-compatible pool: existing db.query(sql, values, callback) calls remain valid.
 const db = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: Number(process.env.DB_PORT || 3306),
+    ...databaseOptions(),
     waitForConnections: true,
     connectionLimit: 10,
     maxIdle: 10,
@@ -15,5 +12,7 @@ const db = mysql.createPool({
     connectTimeout: 10000,
     enableKeepAlive: true
 });
+
+initializePool(db);
 
 module.exports=db;

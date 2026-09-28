@@ -21,7 +21,7 @@ function validateEnvironment(env = process.env) {
     for (const origin of origins) {
         try {
             const url = new URL(origin);
-            if (url.origin !== origin || !['http:', 'https:'].includes(url.protocol) || (production && url.protocol !== 'https:')) throw new Error();
+            if (origin.includes('*') || url.origin !== origin || !['http:', 'https:'].includes(url.protocol) || (production && url.protocol !== 'https:')) throw new Error();
         } catch { errors.push('CLIENT_URL must contain exact HTTP origins (HTTPS in production), without paths or wildcards'); }
     }
     const trustProxy = env.TRUST_PROXY ? env.TRUST_PROXY.split(',').map(s => s.trim()) : false;

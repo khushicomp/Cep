@@ -1,7 +1,6 @@
 // Preparation only. Default invocation performs SELECT/SHOW queries and prints a plan.
 // Do not use --apply until separately authorized. MySQL DDL implicitly commits;
 // completed steps remain applied on failure. Quiesce application writers first.
-const mysql = require('mysql2/promise');
 const path = require('node:path');
 class PreparationError extends Error {}
 const qi = value => '`' + value.replace(/`/g, '``') + '`';
@@ -207,12 +206,7 @@ async function main() {
     require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
     let connection;
     try {
-        connection = await mysql.createConnection({
-            host: process.env.DB_HOST, user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD, database: process.env.DB_NAME,
-            port: Number(process.env.DB_PORT || 3306), dateStrings: true,
-            connectTimeout: 10000, multipleStatements: false
-        });
+        connection = await require('../config/database-options').openConnection();
         const plan = await prepare(connection);
         console.log(JSON.stringify(plan, null, 2));
         if (!args.includes('--apply')) {
